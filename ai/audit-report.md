@@ -120,3 +120,22 @@ Tổng cộng 6 kiểu assertion: dialog, dữ liệu qua API, giá trị ô, th
 | D-04-03 | Alert "Cập nhật thành công!" với SĐT không bắt đầu bằng 0 |
 | D-04-08, B-04-08 | Không lưu được vì cùng lỗi SĐT của D-04-01 |
 | D-04-10 | `role` trong database thành `admin` |
+
+### Bước 6 – Chạy 3 browser, phân loại test đỏ
+
+- Thời gian: 2026-11-17 15:46
+- Prompt: `Chạy FR-xx.spec.js trên chromium, firefox, webkit. Với mỗi test đỏ, xác định lỗi script hay lỗi EShop (dẫn chứng bằng code hoặc ảnh). Sửa lỗi script; lỗi EShop thì giữ đỏ và liệt kê làm bug.`
+- Kết quả: mỗi browser 6 pass, 6 fail (tổng 18 fail / 36). Cùng 6 case fail với cùng thông báo lỗi trên cả 3 browser, nên không có lỗi riêng của browser nào.
+- Phân loại: cả 18 fail đều là lỗi EShop, không có lỗi script cần sửa ở bước này.
+
+| Case đỏ | Thực tế | Dẫn chứng trong code | Bug (issue HW02) |
+| --- | --- | --- | --- |
+| D-04-01, D-04-02 | Alert "Số điện thoại không hợp lệ. Vui lòng nhập đúng 9-10 chữ số." với `0912345678`, `09123456789` | `Profile.jsx:43` regex `/^[1-9][0-9]{8,9}$/` cấm số 0 đầu và chỉ nhận 9–10 chữ số, trái đặc tả "bắt đầu bằng 0, 10–11 chữ số" | BUG-04-01 ([#2](https://github.com/kqanGit/eshop-sut/issues/2)) |
+| D-04-08, B-04-08 | Không lưu được địa chỉ / tên 1 ký tự vì SĐT đúng đặc tả bị từ chối | Cùng `Profile.jsx:43` | BUG-04-01 ([#2](https://github.com/kqanGit/eshop-sut/issues/2)) |
+| D-04-03 | Alert "Cập nhật thành công!" với `9123456789` | Cùng regex `Profile.jsx:43` cho phép số đầu 1–9 | BUG-04-02 ([#3](https://github.com/kqanGit/eshop-sut/issues/3)) |
+| D-04-10 | `role` trong database thành `admin` | `backend/server.js:119-127` lấy `role` từ body và `UPDATE ... role = ?` nếu có | BUG-04-04 ([#5](https://github.com/kqanGit/eshop-sut/issues/5)) |
+
+Ghi chú:
+- Alert không xuất hiện trong ảnh chụp lúc fail (Playwright chụp sau khi dialog đã đóng), nên dẫn chứng chính là nội dung alert trong thông báo lỗi và annotation `alert` của từng test.
+- BUG-04-03 (backend không kiểm tra SĐT) không lộ ra ở tầng UI vì regex frontend chặn trước, nên D-04-04, D-04-05, D-04-06 xanh. Đây là giới hạn của việc chạy các case này qua UI.
+- Cả 3 bug đã có issue từ HW02; khi log bug HW04 sẽ mở issue mới nhãn `HW04`, dẫn link issue cũ.
