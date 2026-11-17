@@ -95,3 +95,28 @@ Expected không ghi nguyên văn câu thông báo vì đặc tả FR-04 không q
   - Lần 1: 8/12 test treo 30 giây rồi fail ở `locator.click`. Nguyên nhân: AI viết code chờ `click()` xong rồi mới `accept()` dialog, trong khi alert "SĐT không hợp lệ" bật đồng bộ ngay lúc bấm nên `click()` không bao giờ xong. AI cũng viết nhầm `testInfo()` (không tồn tại, đúng là `test.info()`).
   - Sửa: accept dialog ngay trong `.then` của `page.waitForEvent('dialog')`, độc lập với `click()`.
   - Lần 2: 12/12 chạy hết trong 8,2 giây (chưa có assertion nên đều xanh). Sau khi chạy, `GET /api/users/me` trả về đúng seed, kể cả `role: "user"`.
+
+### Bước 5 – Thêm assertion
+
+- Thời gian: 2026-11-17 15:40
+- Prompt: `Thêm assertion cho từng loại expected trong FR-xx.spec.js, dùng ít nhất 3 kiểu khác nhau (URL, hiển thị, nội dung, giá trị ô, dialog, dữ liệu qua API). Không dùng waitForTimeout. Không sửa expected để test xanh.`
+- Output: thêm helper `getMe` (đọc hồ sơ qua `GET /api/users/me`) và assertion cho 5 nhánh `expected`:
+
+| expected | Assertion | Kiểu |
+| --- | --- | --- |
+| `success` | alert chứa "thành công"; mỗi trường trong `input` đã lưu đúng trong database; D-04-08 tải lại trang rồi `toHaveValue` | Dialog, dữ liệu qua API, giá trị ô |
+| `invalid-phone` | alert chứa "không hợp lệ"; `phone` trong database vẫn `null` | Dialog, dữ liệu qua API |
+| `missing-name` | `validity.valueMissing` của ô Họ Tên là `true`; URL vẫn `/profile`; không có alert; tên trong database vẫn "Test User" | Trạng thái ô, URL, dữ liệu qua API |
+| `email-locked` | `toBeDisabled()` và `toHaveValue('test@eshop.com')` | Thuộc tính, giá trị ô |
+| `role-unchanged` | `role` trong database vẫn là `user` | Dữ liệu qua API |
+
+Tổng cộng 6 kiểu assertion: dialog, dữ liệu qua API, giá trị ô, thuộc tính (`disabled`), URL, trạng thái validity. Không có `waitForTimeout`; riêng chờ alert dùng `waitForEvent` với timeout 3 giây để case thiếu Họ Tên (không có alert) không treo.
+
+- Kết quả Chromium: 6 pass, 6 fail. Cả 6 fail đều do lỗi EShop, khớp dự đoán ở bước 1:
+
+| Case | Thực tế |
+| --- | --- |
+| D-04-01, D-04-02 | Alert "Số điện thoại không hợp lệ. Vui lòng nhập đúng 9-10 chữ số." với SĐT đúng đặc tả |
+| D-04-03 | Alert "Cập nhật thành công!" với SĐT không bắt đầu bằng 0 |
+| D-04-08, B-04-08 | Không lưu được vì cùng lỗi SĐT của D-04-01 |
+| D-04-10 | `role` trong database thành `admin` |

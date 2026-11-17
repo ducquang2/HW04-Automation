@@ -31,4 +31,11 @@ async function resetProfile(request) {
   });
 }
 
-module.exports = { API, USER, runBy, loginWeb, apiToken, resetProfile };
+// Đọc hồ sơ đang lưu trong database để xác nhận dữ liệu
+async function getMe(request) {
+  const token = await apiToken(request);
+  const res = await request.get(`${API}/api/users/me`, { headers: { Authorization: `Bearer ${token}` } });
+  return res.json();
+}
+
+module.exports = { API, USER, runBy, loginWeb, apiToken, resetProfile, getMe };
