@@ -1,5 +1,6 @@
 const { expect } = require('@playwright/test');
 
+const API = 'http://localhost:3000';
 const USER = { email: 'test@eshop.com', password: 'Test1234!', name: 'Test User' };
 
 // Ghi "Run by" vào từng test trong HTML report
@@ -16,4 +17,18 @@ async function loginWeb(page, user = USER) {
   await expect(page.getByText(`Chào, ${user.name}`)).toBeVisible();
 }
 
-module.exports = { USER, runBy, loginWeb };
+async function apiToken(request, user = USER) {
+  const res = await request.post(`${API}/api/login`, { data: { email: user.email, password: user.password } });
+  return (await res.json()).token;
+}
+
+// Trả hồ sơ user test về đúng seed (PUT ghi đè mọi cột nên phải gửi đủ, kể cả role)
+async function resetProfile(request) {
+  const token = await apiToken(request);
+  await request.put(`${API}/api/users/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { name: USER.name, phone: null, shipping_address: null, role: 'user' },
+  });
+}
+
+module.exports = { API, USER, runBy, loginWeb, apiToken, resetProfile };
