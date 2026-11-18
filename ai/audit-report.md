@@ -590,3 +590,32 @@ Tổng cộng 6 kiểu: hiển thị, nội dung, số lượng, giá trị ô (
   - App không báo lỗi trên trang (không alert, không dòng lỗi) nên bằng chứng là dữ liệu API trong thông báo lỗi (DM id > 3 tên rỗng/khoảng trắng) và annotation `response` của case API.
   - Khi log bug HW04 sẽ mở issue mới nhãn `HW04`, dẫn link issue cũ; AT-01 ghi thêm vào bug của #48 (thiếu kiểm `role` ở cả `POST` và `DELETE`).
   - Sau khi chạy: `GET /api/categories` còn đúng 3 DM seed (id 1–3); `GET /api/admin/users` chỉ còn id 1, 2. Chạy với `--reporter=list` nên không sinh HTML report; đã xóa `test-results/`.
+
+### Bước 7 – Review
+
+- Thời gian: 2026-11-18 11:47
+- Công cụ: Claude Code subagent (dùng skill eshop-playwright-feature)
+- Prompt: `Review lại toàn bộ FR-xx.spec.js và data, lập bảng "AI sai gì / thiếu gì / vì sao / đã sửa thế nào" dựa trên lỗi thật trong các bước trước, kèm commit tương ứng.`
+- Quyết định của sinh viên sau Bước 6: AT-01 (user thường `DELETE`) khi log bug HW04 sẽ mở issue riêng, dẫn link #48 (cùng nguyên nhân thiếu kiểm `role`, khác thao tác), không ghi chung vào bug của #48 như ghi chú Bước 6.
+- Output: đọc lại `tests/FR-14.spec.js`, `data/FR-14.json`, `helpers/common.js`, sửa 2 chỗ trong `tests/FR-14.spec.js` ở commit `6c70465` (dòng 5, 6 dưới đây), không sửa data và helper. Chạy lại Chromium: vẫn 8 pass, 4 fail (D-14-02, D-14-03, D-14-08, AT-01), cùng thông báo lỗi như Bước 5–6, chỉ lệch số dòng (`spec.js:92` cho D-14-02/03, `spec.js:57` cho D-14-08/AT-01) vì thêm code. Sau khi chạy `GET /api/categories` còn đúng 3 DM seed (id 1–3); đã xóa `reports/FR-14-chromium` và `test-results/`. Bảng review:
+
+| # | Bước | AI sai / thiếu gì | Vì sao | Đã sửa thế nào | Commit |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 1 | Chọn D-14-05 (trùng tên) và D-14-10 (xóa DM còn sản phẩm) với expected "từ chối", nhưng đặc tả FR-14 không quy định 2 trường hợp này | AI lấy expected từ HW02 (case bổ sung), không đối chiếu lại đặc tả | Sinh viên thay bằng AT-03 (thêm DM, reload vẫn còn) và AT-04 (DM mới có trong `select` tab Sản phẩm) | `9852cce` |
+| 2 | 1 | Ghi expected 401/403 cho D-14-07, D-14-08, AT-01 | Mã HTTP lấy từ HW02/code; FR-12 chỉ nói phải có JWT và `role = admin` | Chỉ assert `res.ok()` = `false` và dữ liệu không đổi | `9852cce` |
+| 3 | 2 | (Tránh được) Bẫy giao diện: reload quay về Dashboard; tên rỗng không lọc dòng theo tên được; id `AUTOINCREMENT` không dùng lại; menu là `li` không có role | `activeTab` là React state; `getByRole('listitem', { name })` = 0 | `persisted` bấm lại menu sau reload; `rejected-empty` đếm `tbody tr` + API; lấy id từ response `createCategory`; menu dùng `getByText(..., { exact: true })` trong `openAdminTab` | `9852cce` |
+| 4 | 4 | Đọc bảng bằng `allTextContents()` để ghi kết quả | `allTextContents()` không tự chờ, có thể đọc lúc bảng chưa render | Đổi sang `expect(locator).toHaveCount/toHaveText/toBeVisible` | `66976fa` |
+| 5 | 5 | `listed` so tên từ API bằng `toEqual` và cột tên bảng bằng `toHaveText` mảng, đều phụ thuộc thứ tự | `GET /api/categories` là `SELECT *` không `ORDER BY` (`server.js:243-247`), bảng map đúng thứ tự API (`App.jsx:318`); đặc tả không quy định thứ tự. Bước 6 xanh vì SQLite đang trả theo id | API: sort 2 mảng rồi `toEqual`. Bảng: `toHaveCount(3)` + từng tên `rowOf(name).toBeVisible()` | `6c70465` |
+| 6 | 4–5 | Nhánh API case `token: user` không kiểm tra `apiToken` có lấy được token. Login lỗi thì gửi `Bearer undefined`, backend trả 403, D-14-08 và AT-01 xanh vì lý do sai | `apiToken` trong helper không assert response login; lặp lại lỗi "chuẩn bị dữ liệu qua API không assert ok" của FR-09 | Trong spec thêm `expect(token).toBeTruthy()` trước khi gọi API; không sửa helper để giữ FR-04/FR-09 | `6c70465` |
+| 7 | 1 | D-14-05 (BUG-14-02, #47) và D-14-10 (BUG-14-04, #49) không tự động hóa | Đặc tả không quy định trùng tên và xóa DM còn sản phẩm | Không sửa: ghi vào gap analysis | – |
+| 8 | 3 | Không kiểm mã 401/403 ở D-14-07, D-14-08, AT-01 | FR-12 không quy định mã HTTP | Không sửa: ghi vào gap analysis (test vẫn đỏ đúng ở D-14-08, AT-01 vì response ok) | – |
+
+Những điểm đã kiểm tra và không cần sửa:
+- `rejected-empty` assert API rồi mới đếm 3 dòng, sau khi `clickAndCatchDialog` đã chờ 3 giây (hoặc tới khi có dialog). App sửa bằng `alert` thì dialog chỉ bật sau khi request lỗi xong; sửa bằng chặn ở frontend thì không có request. Nên assertion chính (API) không đọc sớm; giữ nguyên, hạn chế là mỗi case UI mất 3 giây (đã ghi ở Bước 5).
+- Nhánh API `DELETE`: `name` chỉ dùng để admin tạo DM trước (`createFirst`), request `DELETE` gửi theo id, không gửi body; giữ nguyên theo quyết định Bước 4.
+- D-14-06 `noDialog`: dialog chỉ được nghe 3 giây, nhưng dòng mới đã hiện (render xong) trước khi so `message` và ô tên `toHaveText` đúng chuỗi `<script>` nên vẫn bắt được trường hợp script chạy.
+- Không có `waitForTimeout`; selector là placeholder, role, chữ hiển thị; `tbody tr` và `td:nth-child(2)` dùng vì bảng không có role/tên riêng (đã ghi ở Bước 2).
+- `createCategory`, `getCategories` assert ok; `cleanupCategories` fail nếu `DELETE` lỗi; `beforeEach` và `afterEach` cùng dọn DM id > 3.
+- `created`: `toHaveValue('')` (hành vi app) đã là `expect.soft` và đứng trước assertion chính.
+- `expected`, `expectedNames` trong data theo đặc tả, không có giá trị nào sửa cho khớp app; không viết dữ liệu trong script.
+- Helper cũ trong `helpers/common.js` không bị sửa ở bước này.
