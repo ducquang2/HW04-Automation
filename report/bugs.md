@@ -8,15 +8,15 @@ Mỗi mục bên dưới (từ dòng `**Tiêu đề issue**` trở xuống) dán
 
 | ID | FR | Tiêu đề | Mức độ | Test đỏ | Browser | Issue HW02 | Issue HW04 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| BUG-HW04-01 | FR-04 | Từ chối SĐT hợp lệ (bắt đầu 0, 10–11 số) | High | D-04-01, D-04-02, D-04-08, B-04-08 | Chromium, Firefox, WebKit | [#2](https://github.com/kqanGit/eshop-sut/issues/2) | #? |
-| BUG-HW04-02 | FR-04 | Chấp nhận SĐT không bắt đầu bằng 0 | High | D-04-03 | Chromium, Firefox, WebKit | [#3](https://github.com/kqanGit/eshop-sut/issues/3) | #? |
-| BUG-HW04-03 | FR-04 | User tự nâng `role` lên `admin` qua `PUT /api/users/me` | Critical | D-04-10 | Chromium, Firefox, WebKit | [#5](https://github.com/kqanGit/eshop-sut/issues/5) | #? |
-| BUG-HW04-04 | FR-09 | Tổng đơn đúng bằng ngưỡng tối thiểu bị từ chối | High | D-09-05, B-09-05 | Chromium, Firefox, WebKit | [#15](https://github.com/kqanGit/eshop-sut/issues/15) | #? |
-| BUG-HW04-05 | FR-09 | Công thức giảm giá `percent` sai (SAVE10 giảm -36.000.000) | Critical | D-09-01 | Chromium, Firefox, WebKit | [#16](https://github.com/kqanGit/eshop-sut/issues/16) | #? |
-| BUG-HW04-06 | FR-09 | Áp mã giảm giá không cần đăng nhập | High | D-09-06 | Chromium, Firefox, WebKit | [#17](https://github.com/kqanGit/eshop-sut/issues/17) | #? |
-| BUG-HW04-07 | FR-14 | Tạo được danh mục tên rỗng / chỉ khoảng trắng | High | D-14-02, D-14-03 | Chromium, Firefox, WebKit | [#46](https://github.com/kqanGit/eshop-sut/issues/46) | #? |
-| BUG-HW04-08 | FR-14 | User thường tạo được danh mục | Critical | D-14-08 | Chromium, Firefox, WebKit | [#48](https://github.com/kqanGit/eshop-sut/issues/48) | #? |
-| BUG-HW04-09 | FR-14 | User thường xóa được danh mục | Critical | AT-01 | Chromium, Firefox, WebKit | liên quan [#48](https://github.com/kqanGit/eshop-sut/issues/48) | #? |
+| BUG-HW04-01 | FR-04 | Từ chối SĐT hợp lệ (bắt đầu 0, 10–11 số) | High | D-04-01, D-04-02, D-04-08, B-04-08 | Chromium, Firefox, WebKit | [#2](https://github.com/kqanGit/eshop-sut/issues/2) | [#165](https://github.com/kqanGit/eshop-sut/issues/165) |
+| BUG-HW04-02 | FR-04 | Chấp nhận SĐT không bắt đầu bằng 0 | High | D-04-03 | Chromium, Firefox, WebKit | [#3](https://github.com/kqanGit/eshop-sut/issues/3) | [#166](https://github.com/kqanGit/eshop-sut/issues/166) |
+| BUG-HW04-03 | FR-04 | User tự nâng `role` lên `admin` qua `PUT /api/users/me` | Critical | D-04-10 | Chromium, Firefox, WebKit | [#5](https://github.com/kqanGit/eshop-sut/issues/5) | [#167](https://github.com/kqanGit/eshop-sut/issues/167) |
+| BUG-HW04-04 | FR-09 | Tổng đơn đúng bằng ngưỡng tối thiểu bị từ chối | High | D-09-05, B-09-05 | Chromium, Firefox, WebKit | [#15](https://github.com/kqanGit/eshop-sut/issues/15) | [#168](https://github.com/kqanGit/eshop-sut/issues/168) |
+| BUG-HW04-05 | FR-09 | Công thức giảm giá `percent` sai (SAVE10 giảm -36.000.000) | Critical | D-09-01 | Chromium, Firefox, WebKit | [#16](https://github.com/kqanGit/eshop-sut/issues/16) | [#169](https://github.com/kqanGit/eshop-sut/issues/169) |
+| BUG-HW04-06 | FR-09 | Áp mã giảm giá không cần đăng nhập | High | D-09-06 | Chromium, Firefox, WebKit | [#17](https://github.com/kqanGit/eshop-sut/issues/17) | [#170](https://github.com/kqanGit/eshop-sut/issues/170) |
+| BUG-HW04-07 | FR-14 | Tạo được danh mục tên rỗng / chỉ khoảng trắng | High | D-14-02, D-14-03 | Chromium, Firefox, WebKit | [#46](https://github.com/kqanGit/eshop-sut/issues/46) | [#171](https://github.com/kqanGit/eshop-sut/issues/171) |
+| BUG-HW04-08 | FR-14 | User thường tạo được danh mục | Critical | D-14-08 | Chromium, Firefox, WebKit | [#48](https://github.com/kqanGit/eshop-sut/issues/48) | [#172](https://github.com/kqanGit/eshop-sut/issues/172) |
+| BUG-HW04-09 | FR-14 | User thường xóa được danh mục | Critical | AT-01 | Chromium, Firefox, WebKit | liên quan [#48](https://github.com/kqanGit/eshop-sut/issues/48) | [#173](https://github.com/kqanGit/eshop-sut/issues/173) |
 
 Môi trường chung: macOS, Playwright 1.65.1, Chromium / Firefox / WebKit, EShop chạy local (web `http://localhost:5173`, admin `http://localhost:5174`, API `http://localhost:3000`). Tài khoản: `test@eshop.com` (user), `admin@eshop.com` (admin).
 
