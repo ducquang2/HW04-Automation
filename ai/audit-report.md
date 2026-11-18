@@ -643,3 +643,10 @@ Những điểm đã kiểm tra và không cần sửa:
 - Prompt: `Viết ai/critique.md 200–300 từ: AI sai/thiên lệch/thiếu ở đâu trong HW04, vì sao, nguyên tắc rút ra. Đếm từ. Xuất PDF cho critique và audit-report.`
 - Ngữ cảnh AI tự đọc: `ai/audit-report.md` (Bước 4–7 của FR-04/09/14, mục Agent Skill), `report/main-report.md` (mục 7 Gap analysis), `HW03/20120359_HW03_AI_GUIUsability/ai/ai-critique.md` (tham khảo văn phong)
 - Output: `ai/critique.md` (296 từ), `ai/critique.pdf`, `ai/audit-report.pdf`
+
+## README
+
+- Thời gian: 2026-11-18 12:16
+- Công cụ: Claude Code subagent
+- Prompt: `Viết README.md: bảng tự chấm (FR 25×3, video 15, skill 10) và test summary (số feature, số test tự động hóa/chạy/pass/fail, số lượt browser, số bug, link video). Xuất git-commit-log.txt.`
+- Output: `README.md` (Thông tin chung, Test summary, Bảng tự chấm điểm, Cách chạy, Cấu trúc thư mục); cột tự chấm và link video để sinh viên điền
