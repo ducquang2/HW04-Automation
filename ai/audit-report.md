@@ -299,3 +299,32 @@ Ghi chú:
   - Chạy thêm 1 lần với reporter JSON để đọc annotation: khớp dự đoán Bước 1. D-09-01 ra "tiết kiệm -36.000.000 ₫, thành tiền 40.000.000 ₫"; D-09-05 và B-09-05 báo "chưa đủ giá trị tối thiểu"; D-09-06 không token vẫn 200 `success`; D-09-07, D-09-09 trả 400 "đã đạt giới hạn"; D-09-08 và D-09-11 giảm 100.000, còn 3.900.000.
   - Chạy lại FR-04 trên Chromium để kiểm helper cũ: 6 pass, 6 fail, đúng 6 case lỗi EShop đã phân loại ở Bước 6 của FR-04.
   - Sau khi chạy: `GET /api/admin/users` chỉ còn id 1, 2; `apply-coupon` SAVE10 4.000.000 với `user_id: 2` vẫn `success` (user test chưa bị tiêu lượt). Đã xóa `reports/FR-09-chromium`, `reports/FR-04-chromium`, `test-results/` của lần chạy thử.
+
+### Bước 5 – Thêm assertion
+
+- Thời gian: 2026-11-18 11:09
+- Công cụ: Claude Code subagent (dùng skill eshop-playwright-feature)
+- Prompt: `Thêm assertion cho từng loại expected trong FR-xx.spec.js, dùng ít nhất 3 kiểu khác nhau (URL, hiển thị, nội dung, giá trị ô, dialog, dữ liệu qua API). Không dùng waitForTimeout. Không sửa expected để test xanh.`
+- Quyết định của sinh viên sau Bước 4: (1) D-09-06 (C4, không token) chỉ assert "không success", không assert số tiền giảm để không lẫn với lỗi công thức percent (BUG-09-01); (2) giữ email user tạm theo `Date.now()` (`workers: 1` nên không trùng).
+- Output: chỉ sửa `tests/FR-09.spec.js`, thêm hàm `toNumber` (bỏ ký tự không phải số nhưng giữ dấu `-`, để "-36.000.000 ₫" thành -36000000) và bảng `ERROR_TEXT` (câu lỗi lấy từ `server.js`, chỉ dùng cho `expect.soft`). Số tiền so với `discount`/`final` trong data (theo đặc tả).
+
+| expected / tầng | Assertion | Kiểu |
+| --- | --- | --- |
+| Mọi case UI (trước khi bấm) | nút "Áp dụng" `toBeEnabled()` sau khi nhập mã; case có `total` thì ô Tổng tiền `toHaveValue(total)` | Trạng thái phần tử, giá trị ô |
+| `applied` / UI | dòng "Tiết kiệm:" hiển thị; số "Tiết kiệm" = `discount`, số "Thành tiền" = `final`; không có `p.text-red-600` | Hiển thị, nội dung |
+| `error` / UI | `p.text-red-600` hiển thị; không có dòng "Tiết kiệm:"; `expect.soft` câu lỗi chứa chữ theo `reason` (C1 "không tồn tại", C2 "hết hạn", C3 "chưa đủ giá trị tối thiểu") | Hiển thị, nội dung (soft) |
+| `applied` / API | body `success` = `true`, `discount_amount` = `discount`, `final_amount` = `final` | Dữ liệu qua API |
+| `error` / API | body `success` khác `true` (không kiểm mã HTTP) | Dữ liệu qua API |
+
+Tổng cộng 5 kiểu assertion: hiển thị, nội dung, giá trị ô, trạng thái phần tử (`enabled`), dữ liệu qua API. Không có `waitForTimeout`; số tiền đọc sau khi `expect(saving).toBeVisible()` đã chờ.
+
+- Kết quả Chromium: 8 pass, 4 fail, khớp dự đoán Bước 1. Không có lỗi script phải sửa.
+
+| Case | Thực tế |
+| --- | --- |
+| D-09-01 | "Tiết kiệm" ra -36.000.000 (expected 400.000), công thức `total × (1 - 10)` |
+| D-09-05 | Không có khối thành công, báo "chưa đủ giá trị tối thiểu" với tổng đúng ngưỡng 300.000 (`>` thay `>=`) |
+| D-09-06 | Không gửi JWT vẫn trả `success: true` |
+| B-09-05 | Như D-09-05 với BIGBUY 500.000 |
+
+- Sau khi chạy: `GET /api/admin/users` chỉ còn id 1, 2; `apply-coupon` SAVE10 với `user_id: 2` vẫn `success`. Đã xóa `reports/FR-09-chromium` và `test-results/`.
