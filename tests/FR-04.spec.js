@@ -60,8 +60,10 @@ test.describe('FR-04 Hồ sơ cá nhân', () => {
 
       const saved = await getMe(request);
 
+      // Câu chữ alert lấy từ code app, đặc tả không quy định, nên dùng expect.soft:
+      // nếu sai câu chữ thì test vẫn chạy tiếp tới phần kiểm tra database (phần theo đặc tả).
       if (c.expected === 'success') {
-        expect(message).toContain('thành công');
+        expect.soft(message).toContain('thành công');
         for (const [key, value] of Object.entries(c.input)) expect(saved[DB_COLUMN[key]]).toBe(value);
         if (c.checkAfterReload) {
           await page.reload();
@@ -70,7 +72,7 @@ test.describe('FR-04 Hồ sơ cá nhân', () => {
       }
 
       if (c.expected === 'invalid-phone') {
-        expect(message).toContain('không hợp lệ');
+        expect.soft(message).toContain('không hợp lệ');
         expect(saved.phone).toBeNull();
       }
 
