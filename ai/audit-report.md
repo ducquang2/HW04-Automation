@@ -567,3 +567,26 @@ Tổng cộng 6 kiểu: hiển thị, nội dung, số lượng, giá trị ô (
 | AT-01 | Token user thường `DELETE` vẫn ok (200), xóa được DM |
 
 - Sau khi chạy: `GET /api/categories` còn đúng 3 DM seed (id 1–3). Đã xóa `reports/FR-14-chromium` và `test-results/`.
+
+### Bước 6 – Chạy 3 browser, phân loại test đỏ
+
+- Thời gian: 2026-11-18 11:41
+- Công cụ: Claude Code subagent (dùng skill eshop-playwright-feature)
+- Prompt: `Chạy FR-xx.spec.js trên chromium, firefox, webkit. Với mỗi test đỏ, xác định lỗi script hay lỗi EShop (dẫn chứng bằng code hoặc ảnh). Sửa lỗi script; lỗi EShop thì giữ đỏ và liệt kê làm bug.`
+- Quyết định của sinh viên sau Bước 5: assertion `listed` so tên từ API bằng `toEqual` (phụ thuộc thứ tự) để lại sửa ở Bước 7.
+- Kết quả: mỗi browser 8 pass, 4 fail (tổng 12 fail / 36). Cùng 4 case fail, cùng dòng assert trên cả 3 browser, khớp dự đoán Bước 2 và kết quả Chromium ở Bước 5.
+- Phân loại: cả 12 fail đều là lỗi EShop, không có lỗi script cần sửa. Assertion `listed` (`toEqual`) xanh trên cả 3 browser nên giữ nguyên tới Bước 7.
+
+| Case đỏ | Thực tế | Dẫn chứng trong code | Bug (issue HW02) |
+| --- | --- | --- | --- |
+| D-14-02 | Tên `""` vẫn lưu, API có thêm DM `{ name: "" }` (fail ở `spec.js:89`) | `frontend-admin/src/App.jsx:298-304` input không có `required`, `142-147` gửi thẳng `categoryName`; `backend/server.js:249-251` không kiểm tra `name` trước khi `INSERT` | BUG-14-01 ([#46](https://github.com/kqanGit/eshop-sut/issues/46)) |
+| D-14-03 | Tên `"   "` vẫn lưu (fail ở `spec.js:89`) | Như D-14-02, không có `trim` ở frontend lẫn backend | BUG-14-01 ([#46](https://github.com/kqanGit/eshop-sut/issues/46)) |
+| D-14-08 | Token user thường `POST /api/categories` vẫn ok, `res.ok()` = `true` (fail ở `spec.js:54`) | `backend/server.js:249` route chỉ có `authenticateToken`; `100-110` chỉ verify JWT, không kiểm `role` | BUG-14-03 ([#48](https://github.com/kqanGit/eshop-sut/issues/48)) |
+| AT-01 | Token user thường `DELETE /api/categories/:id` vẫn ok, xóa được DM (fail ở `spec.js:54`) | `backend/server.js:269` cũng chỉ `authenticateToken` | Case mới, cùng nguyên nhân BUG-14-03 ([#48](https://github.com/kqanGit/eshop-sut/issues/48)) |
+
+- Ghi chú:
+  - Không có case nào fail chỉ trên một browser. Các chỗ có thể khác giữa browser đều xanh trên cả 3: option trong `select` (AT-04 `toHaveCount(1)`), reload giữ `adminToken` trong `localStorage` (AT-03), không bật dialog với chuỗi `<script>` (D-14-06).
+  - D-14-08, AT-01 chạy API nên không phụ thuộc browser; mỗi project chạy 1 lần, đỏ như nhau.
+  - App không báo lỗi trên trang (không alert, không dòng lỗi) nên bằng chứng là dữ liệu API trong thông báo lỗi (DM id > 3 tên rỗng/khoảng trắng) và annotation `response` của case API.
+  - Khi log bug HW04 sẽ mở issue mới nhãn `HW04`, dẫn link issue cũ; AT-01 ghi thêm vào bug của #48 (thiếu kiểm `role` ở cả `POST` và `DELETE`).
+  - Sau khi chạy: `GET /api/categories` còn đúng 3 DM seed (id 1–3); `GET /api/admin/users` chỉ còn id 1, 2. Chạy với `--reporter=list` nên không sinh HTML report; đã xóa `test-results/`.
