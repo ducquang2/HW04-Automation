@@ -22,6 +22,13 @@ async function createCategory(request, name) {
   return (await res.json()).id;
 }
 
+// Đọc danh mục đang lưu trong database để đối chiếu với bảng
+async function getCategories(request) {
+  const res = await request.get(`${API}/api/categories`);
+  expect(res.ok()).toBe(true);
+  return res.json();
+}
+
 test.describe('FR-14 CRUD danh mục', () => {
   test.beforeEach(async ({ request }, testInfo) => {
     runBy(testInfo);
@@ -43,6 +50,11 @@ test.describe('FR-14 CRUD danh mục', () => {
           ? await request.post(`${API}/api/categories`, { headers, data: { name: c.name } })
           : await request.delete(`${API}/api/categories/${id}`, { headers });
         test.info().annotations.push({ type: 'response', description: `${res.status()} ${await res.text()}` });
+        // FR-12 không quy định mã HTTP nên chỉ cần không ok, rồi kiểm dữ liệu không đổi
+        expect(res.ok()).toBe(false);
+        const list = await getCategories(request);
+        if (c.method === 'POST') expect(list.map((x) => x.name)).not.toContain(c.name);
+        else expect(list.map((x) => x.id)).toContain(id);
         return;
       }
 
@@ -51,27 +63,55 @@ test.describe('FR-14 CRUD danh mục', () => {
       const rows = page.locator('tbody tr');
       const rowOf = (name) => rows.filter({ has: page.getByRole('cell', { name, exact: true }) });
 
+      const nameInput = page.getByPlaceholder('Tên danh mục mới');
+      let message = null;
       if (c.expected === 'deleted') {
-        await clickAndCatchDialog(page, rowOf(c.name).getByRole('button', { name: 'Xóa' }));
+        message = await clickAndCatchDialog(page, rowOf(c.name).getByRole('button', { name: 'Xóa' }));
       } else if (c.expected !== 'listed') {
-        await page.getByPlaceholder('Tên danh mục mới').fill(c.name);
-        await clickAndCatchDialog(page, page.getByRole('button', { name: 'Thêm mới' }));
+        await nameInput.fill(c.name);
+        message = await clickAndCatchDialog(page, page.getByRole('button', { name: 'Thêm mới' }));
+      }
+
+      if (c.expected === 'created') {
+        // Ô tên về rỗng là hành vi app, không có trong đặc tả nên dùng soft
+        await expect.soft(nameInput).toHaveValue('');
+        await expect(rowOf(c.name)).toBeVisible();
+        expect((await getCategories(request)).map((x) => x.name)).toContain(c.name);
+        if (c.noDialog) {
+          // Script không chạy: không có dialog, ô tên hiện nguyên chuỗi dạng chữ
+          expect(message).toBeNull();
+          await expect(rowOf(c.name).locator('td:nth-child(2)')).toHaveText(c.name);
+        }
+      }
+
+      if (c.expected === 'rejected-empty') {
+        // clickAndCatchDialog đã chờ 3 giây (hoặc tới khi có dialog) nên thao tác thêm đã xong
+        expect((await getCategories(request)).filter((x) => x.id > 3)).toEqual([]);
+        await expect(rows).toHaveCount(3);
       }
 
       if (c.expected === 'persisted') {
         await page.reload();
         await openAdminTab(page, 'Danh mục');
+        await expect(rowOf(c.name)).toBeVisible();
+        expect((await getCategories(request)).map((x) => x.name)).toContain(c.name);
       }
 
       if (c.expected === 'in-product-select') {
         await openAdminTab(page, 'Sản phẩm');
-        const options = await page.getByRole('combobox').getByRole('option').allTextContents();
-        test.info().annotations.push({ type: 'options', description: JSON.stringify(options) });
-        return;
+        // option trong select không "visible" theo Playwright nên đếm số phần tử
+        await expect(page.getByRole('combobox').getByRole('option', { name: c.name, exact: true })).toHaveCount(1);
       }
 
-      const shown = await rows.locator('td:nth-child(2)').allTextContents();
-      test.info().annotations.push({ type: 'rows', description: JSON.stringify(shown) });
+      if (c.expected === 'deleted') {
+        await expect(rowOf(c.name)).toHaveCount(0);
+        expect((await getCategories(request)).map((x) => x.id)).not.toContain(id);
+      }
+
+      if (c.expected === 'listed') {
+        await expect(rows.locator('td:nth-child(2)')).toHaveText(c.expectedNames);
+        expect((await getCategories(request)).map((x) => x.name)).toEqual(c.expectedNames);
+      }
     });
   }
 });

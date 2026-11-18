@@ -536,3 +536,34 @@ Ghi chú:
   - Chạy thêm 1 lần với reporter JSON để đọc annotation: không case nào bật dialog. D-14-02 và D-14-03 thêm được dòng tên `""` và `"   "` (đúng dự đoán Fail); D-14-01, D-14-04, AT-03 (sau reload), D-14-06 (chuỗi `<script>` hiện dạng chữ) có dòng mới; AT-04 có option `HW04-Select Test`; AT-02 xóa xong bảng còn 3 DM seed; D-14-09 hiện đủ 3 DM seed. API: D-14-07 401 `Unauthorized`; D-14-08 200 tạo được DM; AT-01 200 xóa được DM (đúng dự đoán Fail).
   - Chạy lại FR-04 và FR-09 trên Chromium để kiểm helper cũ: FR-04 6 pass / 6 fail, FR-09 8 pass / 4 fail, giống kết quả đã phân loại trước đó.
   - Sau khi chạy: `GET /api/categories` còn đúng 3 DM seed (id 1–3); `GET /api/admin/users` chỉ còn id 1, 2; hồ sơ user test về seed. Đã xóa `reports/FR-14-chromium`, `reports/FR-04-chromium`, `reports/FR-09-chromium`, `test-results/` của lần chạy thử.
+
+### Bước 5 – Thêm assertion
+
+- Thời gian: 2026-11-18 11:40
+- Công cụ: Claude Code subagent (dùng skill eshop-playwright-feature)
+- Prompt: `Thêm assertion cho từng loại expected trong FR-xx.spec.js, dùng ít nhất 3 kiểu khác nhau (URL, hiển thị, nội dung, giá trị ô, dialog, dữ liệu qua API). Không dùng waitForTimeout. Không sửa expected để test xanh.`
+- Quyết định của sinh viên sau Bước 4: (1) bỏ đọc bảng bằng `allTextContents()` (không tự chờ), đổi sang `expect(locator).toHaveCount/toHaveText/toBeVisible`; (2) chấp nhận mỗi case UI chờ 3 giây cho dialog; (3) nhánh API `DELETE` vẫn giữ như cũ.
+- Output: chỉ sửa `tests/FR-14.spec.js`, thêm hàm `getCategories` (`GET /api/categories`, assert ok) để đối chiếu dữ liệu đã lưu. `clickAndCatchDialog` giờ trả nội dung dialog để assert. Không sửa data, không sửa helper.
+
+| expected | Assertion | Kiểu |
+| --- | --- | --- |
+| `created` | `expect.soft` ô tên `toHaveValue('')`; dòng theo tên `toBeVisible()`; API có tên đó. D-14-06 (`noDialog`): dialog = `null`, ô tên `toHaveText` đúng chuỗi `<script>...` | Giá trị ô (soft), hiển thị, dữ liệu qua API, dialog, nội dung |
+| `rejected-empty` | API không có DM id > 3; `tbody tr` `toHaveCount(3)` (chạy sau khi đã chờ dialog 3 giây nên thao tác thêm đã xong) | Dữ liệu qua API, số lượng |
+| `persisted` | Sau reload + bấm lại menu, dòng theo tên `toBeVisible()`; API có tên đó | Hiển thị, dữ liệu qua API |
+| `in-product-select` | option đúng tên trong `combobox` tab Sản phẩm `toHaveCount(1)` (option trong `select` không tính là visible) | Số lượng |
+| `deleted` | dòng theo tên `toHaveCount(0)`; API không còn id | Số lượng, dữ liệu qua API |
+| `listed` | cột tên `toHaveText(["Điện thoại","Laptop","Phụ kiện"])`; tên từ API `toEqual` đúng mảng đó | Nội dung, dữ liệu qua API |
+| `rejected-auth` | `res.ok()` = `false` (không kiểm 401/403); `POST` thì API không có tên đó, `DELETE` thì API vẫn còn id | Dữ liệu qua API |
+
+Tổng cộng 6 kiểu: hiển thị, nội dung, số lượng, giá trị ô (soft), dialog, dữ liệu qua API. Không có `waitForTimeout`. Chuẩn bị dữ liệu (`createCategory`) và đọc API (`getCategories`) đều assert ok.
+
+- Kết quả Chromium: 8 pass, 4 fail, khớp dự đoán Bước 2. Không có lỗi script phải sửa.
+
+| Case | Thực tế |
+| --- | --- |
+| D-14-02 | Tên `""` vẫn được lưu, API có thêm 1 DM id > 3 |
+| D-14-03 | Tên `"   "` vẫn được lưu, như D-14-02 |
+| D-14-08 | Token user thường `POST` vẫn ok (200), tạo được DM |
+| AT-01 | Token user thường `DELETE` vẫn ok (200), xóa được DM |
+
+- Sau khi chạy: `GET /api/categories` còn đúng 3 DM seed (id 1–3). Đã xóa `reports/FR-14-chromium` và `test-results/`.
