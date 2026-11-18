@@ -403,8 +403,8 @@ Skill `eshop-playwright-feature` ([skills/eshop-playwright-feature/SKILL.md](../
 
 Skill được dùng cho FR-09 và FR-14 (subagent đọc skill rồi làm từng bước, sinh viên duyệt ở mỗi điểm dừng).
 
-- Video demo: `<link YouTube>`
-- Video Agent Skill: `<link YouTube>`
+- Video demo: https://youtu.be/cmTa-C4VCvk
+- Video Agent Skill: https://youtu.be/cmTa-C4VCvk
 
 ## 11. Phụ lục
 

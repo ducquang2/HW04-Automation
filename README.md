@@ -21,8 +21,8 @@ Số liệu lấy từ 9 HTML report trong `reports/`, chạy chính thức ngà
 | Pass | 72 |
 | Fail | 36 (đều do lỗi EShop, không phải lỗi script) |
 | Số bug | 9 (issue #165–#173) |
-| Video demo | `<link YouTube>` |
-| Video Agent Skill | `<link YouTube>` |
+| Video demo | https://youtu.be/cmTa-C4VCvk |
+| Video Agent Skill | https://youtu.be/cmTa-C4VCvk |
 
 Pass / fail theo feature và browser:
 
@@ -37,12 +37,12 @@ Pass / fail theo feature và browser:
 
 | STT | Tiêu chí | Điểm | Tự chấm |
 | --- | --- | --- | --- |
-| 1 | Feature FR-04 | 25 | |
-| 2 | Feature FR-09 | 25 | |
-| 3 | Feature FR-14 | 25 | |
-| 4 | Video demo | 15 | |
-| 5 | Agent Skill | 10 | |
-| | **Tổng** | **100** | |
+| 1 | Feature FR-04 | 25 | 25 |
+| 2 | Feature FR-09 | 25 | 25 |
+| 3 | Feature FR-14 | 25 | 25 |
+| 4 | Video demo | 15 | 15 |
+| 5 | Agent Skill | 10 | 10 |
+| | **Tổng** | **100** | **100** |
 
 ## Cách chạy
 
