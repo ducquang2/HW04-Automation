@@ -18,6 +18,10 @@ Mỗi mục bên dưới (từ dòng `**Tiêu đề issue**` trở xuống) dán
 | BUG-HW04-08 | FR-14 | User thường tạo được danh mục | Critical | D-14-08 | Chromium, Firefox, WebKit | [#48](https://github.com/kqanGit/eshop-sut/issues/48) | [#172](https://github.com/kqanGit/eshop-sut/issues/172) |
 | BUG-HW04-09 | FR-14 | User thường xóa được danh mục | Critical | AT-01 | Chromium, Firefox, WebKit | liên quan [#48](https://github.com/kqanGit/eshop-sut/issues/48) | [#173](https://github.com/kqanGit/eshop-sut/issues/173) |
 
+Ảnh trang GitHub Issues (lọc `label:HW04 label:Quang`, 9 issue #165–#173):
+
+![GitHub Issues](github-issues.png)
+
 Môi trường chung: macOS, Playwright 1.65.1, Chromium / Firefox / WebKit, EShop chạy local (web `http://localhost:5173`, admin `http://localhost:5174`, API `http://localhost:3000`). Tài khoản: `test@eshop.com` (user), `admin@eshop.com` (admin).
 
 Về ảnh: ảnh lấy từ screenshot lúc fail trong report Chromium (Playwright tự chụp). Bug chỉ có test API (03, 06, 08, 09) thì ảnh lúc fail là trang trắng (test không mở trang), nên không dùng; bằng chứng là thông báo lỗi và annotation `response` trong HTML report.
