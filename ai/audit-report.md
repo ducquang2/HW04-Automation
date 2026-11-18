@@ -160,3 +160,9 @@ Những điểm đã kiểm tra và không cần sửa:
 - `beforeEach` và `afterEach` cùng gọi `resetProfile`, sau khi chạy hồ sơ về đúng seed kể cả `role`.
 - `getMe` gọi sau khi đã nhận alert, mà alert thành công chỉ bật sau khi `PUT` xong, nên không bị đọc database quá sớm.
 - `expected` trong data đều theo đặc tả FR-04, không có giá trị nào sửa cho khớp với app.
+
+## Agent Skill
+
+- Thời gian: 2026-11-18 10:36
+- Prompt: `Viết skills/<tên>/SKILL.md từ 7 bước đã làm với FR-04: đầu vào, các bước, điểm dừng để mình review, định dạng đầu ra, và các bẫy của EShop đã gặp.`
+- Output: `skills/eshop-playwright-feature/SKILL.md` gồm: bảng đầu vào; quy tắc chung (expected theo đặc tả, data JSON riêng, không `waitForTimeout`, ghi audit, format commit); 7 bước, mỗi bước kết thúc bằng một điểm dừng cho người review; bảng file đầu ra; 10 bẫy EShop gặp khi làm FR-04 (label không gắn input, alert đồng bộ làm `click()` treo, `PUT /api/users/me` ghi đè cột, backend nhận `role`, bong bóng HTML5, ảnh chụp không có alert...).
