@@ -635,3 +635,11 @@ Những điểm đã kiểm tra và không cần sửa:
 - Prompt: `Viết report/main-report.md gồm: quy trình AI-first, 3 feature (12 case, kiểu assertion, kết quả 3 browser), bảng review, gap analysis, test case chưa tự động hóa kèm lý do. Xuất PDF.`
 - Ngữ cảnh AI tự đọc: `ai/audit-report.md`, `data/FR-04|09|14.json`, `tests/*.spec.js`, `helpers/common.js`, `playwright.config.js`, `run-all.js`, `report/bugs.md`, `skills/eshop-playwright-feature/SKILL.md`, 9 HTML report trong `reports/` (report.json giải nén từ zip base64), `git log --oneline`, hướng dẫn nhóm (mục 2, 8, 9.3).
 - Output: `report/main-report.md` (1 Thông tin chung, 2 Thiết lập, 3 Quy trình AI-first, 4 Kết quả từng feature FR-04/FR-09/FR-14, 5 Test summary, 6 Review, 7 Gap analysis, 8 Test case chưa tự động hóa, 9 Bug, 10 Agent Skill, 11 Phụ lục), `report/main-report.pdf` (12 trang)
+
+## AI Critique
+
+- Thời gian: 2026-11-18 12:14
+- Công cụ: Claude Code subagent
+- Prompt: `Viết ai/critique.md 200–300 từ: AI sai/thiên lệch/thiếu ở đâu trong HW04, vì sao, nguyên tắc rút ra. Đếm từ. Xuất PDF cho critique và audit-report.`
+- Ngữ cảnh AI tự đọc: `ai/audit-report.md` (Bước 4–7 của FR-04/09/14, mục Agent Skill), `report/main-report.md` (mục 7 Gap analysis), `HW03/20120359_HW03_AI_GUIUsability/ai/ai-critique.md` (tham khảo văn phong)
+- Output: `ai/critique.md` (296 từ), `ai/critique.pdf`, `ai/audit-report.pdf`
