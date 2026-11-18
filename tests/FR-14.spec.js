@@ -45,7 +45,10 @@ test.describe('FR-14 CRUD danh mục', () => {
       const id = c.createFirst ? await createCategory(request, c.name) : null;
 
       if (c.layer === 'api') {
-        const headers = c.token === 'user' ? { Authorization: `Bearer ${await apiToken(request)}` } : {};
+        const token = c.token === 'user' ? await apiToken(request) : null;
+        // apiToken không kiểm login; token rỗng thì backend từ chối và test xanh vì lý do sai
+        if (c.token === 'user') expect(token).toBeTruthy();
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const res = c.method === 'POST'
           ? await request.post(`${API}/api/categories`, { headers, data: { name: c.name } })
           : await request.delete(`${API}/api/categories/${id}`, { headers });
@@ -109,8 +112,10 @@ test.describe('FR-14 CRUD danh mục', () => {
       }
 
       if (c.expected === 'listed') {
-        await expect(rows.locator('td:nth-child(2)')).toHaveText(c.expectedNames);
-        expect((await getCategories(request)).map((x) => x.name)).toEqual(c.expectedNames);
+        // Đặc tả không quy định thứ tự (API SELECT không ORDER BY, bảng hiện theo API) nên so không theo thứ tự
+        await expect(rows).toHaveCount(c.expectedNames.length);
+        for (const name of c.expectedNames) await expect(rowOf(name)).toBeVisible();
+        expect((await getCategories(request)).map((x) => x.name).sort()).toEqual([...c.expectedNames].sort());
       }
     });
   }
