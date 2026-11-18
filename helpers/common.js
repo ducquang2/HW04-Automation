@@ -2,6 +2,7 @@ const { expect } = require('@playwright/test');
 
 const API = 'http://localhost:3000';
 const USER = { email: 'test@eshop.com', password: 'Test1234!', name: 'Test User' };
+const ADMIN = { email: 'admin@eshop.com', password: 'Admin123!' };
 
 // Ghi "Run by" vào từng test trong HTML report
 function runBy(testInfo) {
@@ -38,4 +39,29 @@ async function getMe(request) {
   return res.json();
 }
 
-module.exports = { API, USER, runBy, loginWeb, apiToken, resetProfile, getMe };
+// Giỏ chỉ nằm trong React state nên phải đi bằng click (goto('/cart') làm mất giỏ)
+async function goToCheckout(page) {
+  await page.getByRole('link', { name: 'EShop', exact: true }).click();
+  const card = page.locator('div.border').filter({ has: page.getByRole('heading', { name: 'Bàn phím cơ Keychron Q1' }) });
+  await card.getByRole('button', { name: 'Thêm vào giỏ' }).click();
+  await page.getByRole('link', { name: 'Giỏ hàng' }).click();
+  await expect(page.getByRole('heading', { name: 'Giỏ Hàng' })).toBeVisible();
+  await page.getByRole('button', { name: 'Tiến hành thanh toán' }).click();
+  await expect(page.getByRole('heading', { name: 'Xác Nhận Đơn Hàng' })).toBeVisible();
+}
+
+// Tạo user mới để ghi lượt dùng coupon mà không đụng user test
+async function createTempUser(request) {
+  const user = { name: 'Temp User', email: `temp-${Date.now()}@eshop.com`, password: 'Temp1234!' };
+  const res = await request.post(`${API}/api/register`, { data: user });
+  return { id: (await res.json()).id, token: await apiToken(request, user) };
+}
+
+// Xóa mọi user ngoài seed (id 1 admin, id 2 test) bằng token admin
+async function cleanupUsers(request) {
+  const headers = { Authorization: `Bearer ${await apiToken(request, ADMIN)}` };
+  const users = await (await request.get(`${API}/api/admin/users`, { headers })).json();
+  for (const u of users.filter((u) => u.id > 2)) await request.delete(`${API}/api/admin/users/${u.id}`, { headers });
+}
+
+module.exports = { API, USER, runBy, loginWeb, apiToken, resetProfile, getMe, goToCheckout, createTempUser, cleanupUsers };

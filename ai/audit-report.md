@@ -246,3 +246,56 @@ Ghi chú:
 - Phải chờ tiêu đề trang (hoặc dùng `expect` tự chờ) trước khi đếm/thao tác; gọi `count()` ngay sau click ra 0 vì trang chưa render.
 - API cho case 6–9 (đã gọi thử): case 6 gửi `apply-coupon` không JWT, `user_id: null`, SAVE10 300.001 → 200 `success` (lỗi, đúng dự đoán). Case 7–9: `register` trả `id` → `login` lấy token → `coupon-usage` với `coupon_id` (SAVE10 = 1, VIP100 = 3, lấy từ `GET /api/coupons`) → `apply-coupon` với `user_id` mới: SAVE10 1/1 → 400 "đã đạt giới hạn", VIP100 1/2 → 200 giảm 100.000, VIP100 2/2 → 400. `DELETE /api/admin/users/:id` bằng token admin → 200, user mất khỏi `GET /api/admin/users`. Bảng `users` dùng `AUTOINCREMENT` nên id không bị tái dùng, dòng `coupon_usage` cũ không dính sang user mới.
 - Sau khi chạy thử, `test@eshop.com` vẫn chưa dùng SAVE10 (gọi `apply-coupon` vẫn 200), user tạm đã xóa.
+
+### Bước 3 – Thiết kế file dữ liệu
+
+- Thời gian: 2026-11-18 10:56
+- Công cụ: Claude Code subagent (dùng skill eshop-playwright-feature)
+- Prompt: `Thiết kế data/FR-xx.json cho 12 case đã chọn: mỗi dòng có id (TC-FRxx-<ID HW02>), title, dữ liệu nhập và expected viết theo đặc tả, không theo hành vi hiện tại của app. Chỉ ra case nào cần trường riêng.`
+- Quyết định của sinh viên sau Bước 2: (1) dòng lỗi giữ `p.text-red-600`, khối thành công tìm theo chữ "Tiết kiệm:", "Thành tiền:" thay cho `div.text-green-700`; (2) mỗi test tự đi lại đường giỏ hàng (logo → Thêm vào giỏ → Giỏ hàng → Tiến hành thanh toán); (3) 4 bẫy mới của Bước 2 thêm vào SKILL.md sau khi xong FR-09.
+- Output: file `data/FR-09.json` (12 dòng). Cấu trúc chung: `id`, `title`, `layer` (`ui`/`api`), `code` (mã nhập), `total`, `expected`. Không gom vào `input` như FR-04 vì mỗi case chỉ có 2 dữ liệu nhập (mã, tổng). `total: null` nghĩa là dùng tổng thật của giỏ (4.000.000, không sửa ô); có số thì case UI fill ô "Tổng tiền thanh toán", case API gửi làm `total_amount`. Case `applied` có thêm `discount` và `final` (số nguyên, đơn vị đồng).
+
+`expected` có 2 giá trị:
+
+| expected | Ý nghĩa theo đặc tả | Case |
+| --- | --- | --- |
+| `applied` | Áp được mã, số tiền giảm = `discount`, thành tiền = `final` | D-09-01, D-09-05, D-09-08, D-09-11, B-09-05 |
+| `error` | Không áp được mã (vi phạm 1 trong C1–C5), không có số tiền giảm | D-09-02, D-09-03, D-09-04, D-09-06, D-09-07, D-09-09, B-09-04 |
+
+Số liệu expected (tính theo công thức đặc tả):
+
+| Case | Mã | Tổng | discount | final |
+| --- | --- | --- | --- | --- |
+| D-09-01 | SAVE10 (10%) | 4.000.000 | 400.000 | 3.600.000 |
+| D-09-05 | SAVE10 (10%) | 300.000 (đúng ngưỡng, `>=`) | 30.000 | 270.000 |
+| D-09-08 | VIP100 (fixed) | 4.000.000 | 100.000 | 3.900.000 |
+| D-09-11 | VIP100 (fixed) | 4.000.000 | 100.000 | 3.900.000 |
+| B-09-05 | BIGBUY (fixed) | 500.000 (đúng ngưỡng) | 50.000 | 450.000 |
+
+Case cần trường riêng:
+- D-09-06: `noToken: true`, gọi `apply-coupon` không gửi JWT, `user_id: null`.
+- D-09-07, D-09-08, D-09-09: `priorUses` (1, 1, 2) = số lần ghi `POST /api/coupon-usage` cho user mới trước khi áp mã.
+- Case API (D-09-06..09) luôn có `total` cụ thể vì không đi qua giỏ hàng.
+
+Ghi chú:
+- Điều kiện coupon (loại, giá trị, ngưỡng, hạn, số lượt/người) của SAVE10, BIGBUY, VIP100, EXPIRED trong đặc tả khớp với seed `backend/database.js:107-110`, không có chỗ lệch.
+- D-09-08 và D-09-11 cùng VIP100 trên 4.000.000 nhưng khác mục tiêu: D-09-08 kiểm C5 (còn lượt, qua API), D-09-11 kiểm công thức fixed trên UI.
+- Không ghi câu thông báo lỗi vì đặc tả FR-09 không quy định câu chữ; script chỉ assert có dòng lỗi và không có khối "Tiết kiệm:" (UI), hoặc response không phải `success` (API).
+- Đã kiểm tra bằng node: 12 dòng, `id` không trùng; `discount`/`final` tính lại theo công thức đều khớp.
+
+### Bước 4 – Khung script
+
+- Thời gian: 2026-11-18 11:05
+- Công cụ: Claude Code subagent (dùng skill eshop-playwright-feature)
+- Prompt: `Viết tests/FR-xx.spec.js đọc dữ liệu từ data/FR-xx.json, dùng helper trong helpers/common.js, có bước dọn dữ liệu bằng API (beforeEach/afterEach) để chạy lại trên browser khác không bị lỗi. Chưa cần assertion đầy đủ. Chạy thử trên Chromium.`
+- Quyết định của sinh viên sau Bước 3: (1) thêm trường `reason` (`C1`–`C5`, điều kiện vi phạm theo đặc tả) cho mỗi case `error`, chỉ để report dễ đọc, assertion không đổi; (2) giữ cả D-09-08 và D-09-11; (3) case `error` qua API chỉ cần response không phải `success`, không kiểm mã HTTP.
+- Output:
+  - `data/FR-09.json`: thêm `reason` cho 7 case `error` (D-09-02 `C1`, D-09-03 `C2`, D-09-04 và B-09-04 `C3`, D-09-06 `C4`, D-09-07 và D-09-09 `C5`).
+  - `helpers/common.js` (giữ nguyên helper cũ): thêm `ADMIN`, `goToCheckout` (logo → thẻ Keychron Q1 → Thêm vào giỏ → link Giỏ hàng → Tiến hành thanh toán, chờ heading "Xác Nhận Đơn Hàng"), `createTempUser` (`POST /api/register` email theo thời gian rồi lấy token), `cleanupUsers` (token admin, `GET /api/admin/users` rồi `DELETE` mọi user có id > 2).
+  - `tests/FR-09.spec.js`: vòng lặp tạo 12 test từ data, `reason` ghi vào annotation. Nhánh `api`: case có `noToken` gửi `apply-coupon` không header, `user_id: null`; case 7–9 tạo user tạm, lấy `coupon_id` theo `code` từ `GET /api/coupons`, ghi `priorUses` lần `coupon-usage`, rồi gọi `apply-coupon`; ghi status và body vào annotation. Nhánh `ui`: `loginWeb` → `goToCheckout` → fill ô Tổng tiền nếu `total` khác `null` → nhập mã → Áp dụng, chờ `p.text-red-600` hoặc "Tiết kiệm:" hiện, ghi nội dung lỗi hoặc số tiền vào annotation. Không bấm "Xác Nhận Thanh Toán".
+  - Dọn dữ liệu: `beforeEach` và `afterEach` đều gọi `cleanupUsers`; `afterEach` chạy cả khi test fail nên user tạm luôn bị xóa. Case UI chỉ áp mã nên không ghi gì vào database.
+- Kết quả chạy Chromium:
+  - Lần 1: 12/12 chạy hết trong 5,5 giây, không treo, không có lỗi script phải sửa (chưa có assertion nên đều xanh).
+  - Chạy thêm 1 lần với reporter JSON để đọc annotation: khớp dự đoán Bước 1. D-09-01 ra "tiết kiệm -36.000.000 ₫, thành tiền 40.000.000 ₫"; D-09-05 và B-09-05 báo "chưa đủ giá trị tối thiểu"; D-09-06 không token vẫn 200 `success`; D-09-07, D-09-09 trả 400 "đã đạt giới hạn"; D-09-08 và D-09-11 giảm 100.000, còn 3.900.000.
+  - Chạy lại FR-04 trên Chromium để kiểm helper cũ: 6 pass, 6 fail, đúng 6 case lỗi EShop đã phân loại ở Bước 6 của FR-04.
+  - Sau khi chạy: `GET /api/admin/users` chỉ còn id 1, 2; `apply-coupon` SAVE10 4.000.000 với `user_id: 2` vẫn `success` (user test chưa bị tiêu lượt). Đã xóa `reports/FR-09-chromium`, `reports/FR-04-chromium`, `test-results/` của lần chạy thử.
