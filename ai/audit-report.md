@@ -305,7 +305,7 @@ Ghi chú:
 - Thời gian: 2026-11-18 11:09
 - Công cụ: Claude Code subagent (dùng skill eshop-playwright-feature)
 - Prompt: `Thêm assertion cho từng loại expected trong FR-xx.spec.js, dùng ít nhất 3 kiểu khác nhau (URL, hiển thị, nội dung, giá trị ô, dialog, dữ liệu qua API). Không dùng waitForTimeout. Không sửa expected để test xanh.`
-- Quyết định của sinh viên sau Bước 4: (1) D-09-06 (C4, không token) chỉ assert "không success", không assert số tiền giảm để không lẫn với lỗi công thức percent (BUG-09-01); (2) giữ email user tạm theo `Date.now()` (`workers: 1` nên không trùng).
+- Quyết định của sinh viên sau Bước 4: (1) D-09-06 (C4, không token) chỉ assert "không success", không assert số tiền giảm để không lẫn với lỗi công thức percent (BUG-09-02); (2) giữ email user tạm theo `Date.now()` (`workers: 1` nên không trùng).
 - Output: chỉ sửa `tests/FR-09.spec.js`, thêm hàm `toNumber` (bỏ ký tự không phải số nhưng giữ dấu `-`, để "-36.000.000 ₫" thành -36000000) và bảng `ERROR_TEXT` (câu lỗi lấy từ `server.js`, chỉ dùng cho `expect.soft`). Số tiền so với `discount`/`final` trong data (theo đặc tả).
 
 | expected / tầng | Assertion | Kiểu |
@@ -328,3 +328,26 @@ Tổng cộng 5 kiểu assertion: hiển thị, nội dung, giá trị ô, trạ
 | B-09-05 | Như D-09-05 với BIGBUY 500.000 |
 
 - Sau khi chạy: `GET /api/admin/users` chỉ còn id 1, 2; `apply-coupon` SAVE10 với `user_id: 2` vẫn `success`. Đã xóa `reports/FR-09-chromium` và `test-results/`.
+
+### Bước 6 – Chạy 3 browser, phân loại test đỏ
+
+- Thời gian: 2026-11-18 11:18
+- Công cụ: Claude Code subagent (dùng skill eshop-playwright-feature)
+- Prompt: `Chạy FR-xx.spec.js trên chromium, firefox, webkit. Với mỗi test đỏ, xác định lỗi script hay lỗi EShop (dẫn chứng bằng code hoặc ảnh). Sửa lỗi script; lỗi EShop thì giữ đỏ và liệt kê làm bug.`
+- Quyết định của sinh viên sau Bước 5: chưa sửa vị trí 2 assertion phụ (`toBeEnabled`, `toHaveValue`) đặt trước nút bấm, để lại cho Bước 7.
+- Kết quả: mỗi browser 8 pass, 4 fail (tổng 12 fail / 36). Cùng 4 case fail với cùng thông báo lỗi trên cả 3 browser, khớp dự đoán Bước 1 và kết quả Chromium ở Bước 5.
+- Phân loại: cả 12 fail đều là lỗi EShop, không có lỗi script cần sửa ở bước này. 2 assertion phụ `toBeEnabled`, `toHaveValue` không fail trên browser nào nên giữ nguyên.
+
+| Case đỏ | Thực tế | Dẫn chứng trong code | Bug (issue HW02) |
+| --- | --- | --- | --- |
+| D-09-01 | SAVE10 trên 4.000.000: "Tiết kiệm -36.000.000 ₫", "Thành tiền 40.000.000 ₫" (expected 400.000 / 3.600.000) | `backend/server.js:399-401` (và `419-421`) tính `Math.floor(total_amount * (1 - coupon.discount_value))` với `discount_value = 10` | BUG-09-02 ([#16](https://github.com/kqanGit/eshop-sut/issues/16)) |
+| D-09-05 | SAVE10 tổng 300.000: báo "Đơn hàng chưa đủ giá trị tối thiểu 300,000 ₫...", không có khối "Tiết kiệm:" | `backend/server.js:379` `if (total_amount > coupon.min_order_amount)`, đặc tả là `>=` | BUG-09-01 ([#15](https://github.com/kqanGit/eshop-sut/issues/15)) |
+| B-09-05 | BIGBUY tổng 500.000: báo "chưa đủ giá trị tối thiểu 500,000 ₫" | Cùng `server.js:379` | BUG-09-01 ([#15](https://github.com/kqanGit/eshop-sut/issues/15)) |
+| D-09-06 | `POST /api/apply-coupon` không JWT, `user_id: null` vẫn 200 `success: true` | `backend/server.js:363` route không có `authenticateToken`; nhánh `user_id` rỗng `416-432` vẫn trả `success` | BUG-09-03 ([#17](https://github.com/kqanGit/eshop-sut/issues/17)) |
+
+- Ghi chú:
+  - Đã kiểm tra format số tiền: frontend in bằng `toLocaleString()` (`Checkout.jsx:130-131`, `138`) theo locale `vi-VN` của config; snapshot lúc fail của D-09-01 trên cả 3 browser đều là `"-36.000.000 ₫"` / `40.000.000 ₫`, nên `toNumber` đọc ra cùng số (-36000000) trên mọi browser. D-09-11 (100.000 / 3.900.000) xanh trên cả 3 browser cũng cho thấy hàm đọc số đúng.
+  - D-09-06 chạy API nên không phụ thuộc browser; vẫn chạy 3 lần (mỗi project 1 lần) và đỏ như nhau.
+  - Kết quả báo bằng text trên trang (không phải alert) nên ảnh chụp và snapshot `error-context.md` lúc fail giữ được bằng chứng: D-09-05, B-09-05 có dòng lỗi "chưa đủ giá trị tối thiểu", D-09-01 có khối xanh với số âm.
+  - Cả 3 bug đã có issue từ HW02; khi log bug HW04 sẽ mở issue mới nhãn `HW04`, dẫn link issue cũ.
+  - Sau khi chạy: `GET /api/admin/users` chỉ còn id 1, 2; `apply-coupon` SAVE10 với `user_id: 2` vẫn `success`. Chạy với `--reporter=list` nên không sinh HTML report; đã xóa `test-results/`.
