@@ -487,3 +487,52 @@ Ghi chú:
 - API cho case 7–9 (đã gọi thử): `POST /api/categories` không token → 401 `Unauthorized`; token `test@eshop.com` → 200 tạo được (Fail); admin tạo DM rồi token user `DELETE` → 200 xóa được (Fail). Id dùng `AUTOINCREMENT` (DM thử ra `#8`, không tái dùng id 4–7), nên assert theo tên/id trả về, không đoán id.
 - `helpers/common.js` có `ADMIN` nhưng chưa export, Bước 4 cần thêm vào `module.exports` (hoặc helper dọn DM id > 3).
 - Sau khi chạy thử, đã xóa DM id 9–11 bằng token admin (id 8 đã xóa qua UI); `GET /api/categories` còn đúng 3 DM seed.
+
+### Bước 3 – Thiết kế file dữ liệu
+
+- Thời gian: 2026-11-18 11:34
+- Công cụ: Claude Code subagent (dùng skill eshop-playwright-feature)
+- Prompt: `Thiết kế data/FR-xx.json cho 12 case đã chọn: mỗi dòng có id (TC-FRxx-<ID HW02>), title, dữ liệu nhập và expected viết theo đặc tả, không theo hành vi hiện tại của app. Chỉ ra case nào cần trường riêng.`
+- Quyết định của sinh viên sau Bước 2: (1) dùng bảng locator Bước 2 (menu bằng `getByText(..., { exact: true })`, nút Xóa khoanh theo dòng); (2) `ADMIN` sẽ export trong `helpers/common.js` ở Bước 4, bước này không sửa helper; (3) AT-04 chỉ kiểm tra option có trong `select` tab Sản phẩm, không bấm "Lưu sản phẩm".
+- Output: file `data/FR-14.json` (12 dòng). Cấu trúc chung: `id`, `title`, `layer` (`ui`/`api`), `name` (tên DM nhập), `expected`. Không gom vào `input` vì mỗi case chỉ có 1 dữ liệu nhập. Tên DM test có tiền tố `HW04-` để không trùng seed và dễ tìm dòng theo tên; mỗi case một tên khác nhau.
+
+`expected` có 7 giá trị:
+
+| expected | Ý nghĩa theo đặc tả | Case |
+| --- | --- | --- |
+| `created` | Thêm được: có dòng đúng `name` trong bảng và trong `GET /api/categories` | D-14-01, D-14-04, D-14-06 |
+| `rejected-empty` | Tên rỗng/khoảng trắng bị từ chối: số dòng bảng không tăng, API không có DM mới | D-14-02, D-14-03 |
+| `persisted` | Thêm xong reload, bấm lại menu "Danh mục", DM vẫn còn | AT-03 |
+| `in-product-select` | DM mới có option trong `select` tab Sản phẩm | AT-04 |
+| `rejected-auth` | API từ chối (response không ok), dữ liệu không đổi: `POST` thì không có DM tên đó, `DELETE` thì DM vẫn còn | D-14-07, D-14-08, AT-01 |
+| `deleted` | Bấm "Xóa" ở dòng DM, dòng biến mất, `GET /api/categories` không còn id đó | AT-02 |
+| `listed` | Bảng hiện đủ `expectedNames`, khớp `GET /api/categories` | D-14-09 |
+
+Case cần trường riêng:
+- D-14-06: `noDialog: true`, assert không bật dialog (script không chạy).
+- D-14-07, D-14-08, AT-01: `method` (`POST`/`DELETE`) và `token` (`none`/`user`).
+- AT-01, AT-02: `createFirst: true`, admin tạo DM `name` qua API trước (assert response ok), lấy id trả về để xóa.
+- D-14-09: `expectedNames` = 3 DM seed (Điện thoại, Laptop, Phụ kiện), không có `name`.
+
+Ghi chú:
+- Đặc tả FR-12 chỉ nói phải có JWT hợp lệ và `role = admin`, không nói mã HTTP. Nên case 7–9 để chung `rejected-auth`, không ghi 401/403; script assert `!response.ok()` và dữ liệu không đổi. Mã 401/403 trong Bước 1 lấy từ HW02/code, không phải đặc tả.
+- Đặc tả FR-14 không nói tên có trim hay không; D-14-03 coi khoảng trắng là "để trống" như HW02.
+- D-14-04 giữ tên `A` không có tiền tố vì dữ liệu của case là 1 ký tự; seed không có DM `A`, dọn theo id > 3 nên vẫn dọn được.
+- Case rỗng/khoảng trắng không có tiền tố, script đếm dòng chứ không tìm theo tên.
+- Đã kiểm tra bằng node: 12 dòng, `id` không trùng, `name` không trùng.
+
+### Bước 4 – Khung script
+
+- Thời gian: 2026-11-18 11:37
+- Công cụ: Claude Code subagent (dùng skill eshop-playwright-feature)
+- Prompt: `Viết tests/FR-xx.spec.js đọc dữ liệu từ data/FR-xx.json, dùng helper trong helpers/common.js, có bước dọn dữ liệu bằng API (beforeEach/afterEach) để chạy lại trên browser khác không bị lỗi. Chưa cần assertion đầy đủ. Chạy thử trên Chromium.`
+- Quyết định của sinh viên sau Bước 3: (1) case 7–9 chỉ assert response không ok và dữ liệu không đổi, không kiểm 401/403 (FR-12 không quy định mã HTTP); (2) D-14-04 giữ tên `A` không tiền tố, dọn theo id > 3 vẫn bắt được; (3) tên toàn khoảng trắng coi là "để trống"; (4) D-14-06 dùng `created` + cờ `noDialog`.
+- Output:
+  - `helpers/common.js` (giữ nguyên helper cũ và chữ ký): export `ADMIN`; thêm `loginAdmin` (goto `http://localhost:5174`, điền placeholder Email/Password, bấm Login, chờ heading "EShop Admin"), `openAdminTab(page, tab)` (`getByText(tab, { exact: true })`, chờ heading `Quản lý <tab>`), `cleanupCategories` (token admin, `GET /api/categories` rồi `DELETE` mọi DM id > 3, response DELETE không ok thì `expect` fail luôn).
+  - `tests/FR-14.spec.js`: vòng lặp tạo 12 test từ data. Hàm trong spec `clickAndCatchDialog` (đăng ký `waitForEvent('dialog', { timeout: 3_000 })`, accept ngay trong `.then`, ghi nội dung hoặc `null` vào annotation) dùng cho nút "Thêm mới" và "Xóa"; `createCategory` (admin `POST /api/categories`, `expect(res.ok())`, trả id) cho case `createFirst`. Nhánh `api`: header theo `token` (`none` không header, `user` token test@eshop.com), gửi `POST` với `name` hoặc `DELETE` id vừa tạo, ghi status/body vào annotation. Nhánh `ui`: `loginAdmin` → `openAdminTab('Danh mục')` → thêm tên (hoặc bấm Xóa ở dòng DM đã tạo cho `deleted`, không làm gì cho `listed`); `persisted` reload rồi bấm lại menu; `in-product-select` mở tab "Sản phẩm", ghi các option; còn lại ghi cột tên của bảng. Không bấm "Lưu sản phẩm".
+  - Dọn dữ liệu: `beforeEach` và `afterEach` đều gọi `cleanupCategories`; `afterEach` chạy cả khi test fail. Chỉ xóa id > 3 nên 3 DM seed không bị đụng.
+- Kết quả chạy Chromium:
+  - Lần 1: 12/12 chạy hết trong 28,3 giây, không treo, không có lỗi script phải sửa (chưa có assertion nên đều xanh). Các case UI mất khoảng 3,3 giây vì chờ hết 3 giây timeout của `dialog`.
+  - Chạy thêm 1 lần với reporter JSON để đọc annotation: không case nào bật dialog. D-14-02 và D-14-03 thêm được dòng tên `""` và `"   "` (đúng dự đoán Fail); D-14-01, D-14-04, AT-03 (sau reload), D-14-06 (chuỗi `<script>` hiện dạng chữ) có dòng mới; AT-04 có option `HW04-Select Test`; AT-02 xóa xong bảng còn 3 DM seed; D-14-09 hiện đủ 3 DM seed. API: D-14-07 401 `Unauthorized`; D-14-08 200 tạo được DM; AT-01 200 xóa được DM (đúng dự đoán Fail).
+  - Chạy lại FR-04 và FR-09 trên Chromium để kiểm helper cũ: FR-04 6 pass / 6 fail, FR-09 8 pass / 4 fail, giống kết quả đã phân loại trước đó.
+  - Sau khi chạy: `GET /api/categories` còn đúng 3 DM seed (id 1–3); `GET /api/admin/users` chỉ còn id 1, 2; hồ sơ user test về seed. Đã xóa `reports/FR-14-chromium`, `reports/FR-04-chromium`, `reports/FR-09-chromium`, `test-results/` của lần chạy thử.

@@ -64,4 +64,29 @@ async function cleanupUsers(request) {
   for (const u of users.filter((u) => u.id > 2)) await request.delete(`${API}/api/admin/users/${u.id}`, { headers });
 }
 
-module.exports = { API, USER, runBy, loginWeb, apiToken, resetProfile, getMe, goToCheckout, createTempUser, cleanupUsers };
+// Trang admin ở cổng khác (5174), form login chỉ có placeholder, không có label
+async function loginAdmin(page) {
+  await page.goto('http://localhost:5174');
+  await page.getByPlaceholder('Email').fill(ADMIN.email);
+  await page.getByPlaceholder('Password').fill(ADMIN.password);
+  await page.getByRole('button', { name: 'Login' }).click();
+  await expect(page.getByRole('heading', { name: 'EShop Admin' })).toBeVisible();
+}
+
+// Menu là <li> có onClick nên tìm theo chữ; exact để không khớp "Quản lý Danh mục"
+async function openAdminTab(page, tab) {
+  await page.getByText(tab, { exact: true }).click();
+  await expect(page.getByRole('heading', { name: `Quản lý ${tab}` })).toBeVisible();
+}
+
+// Xóa mọi danh mục ngoài seed (id 1–3) bằng token admin; DELETE lỗi thì fail luôn, không bỏ qua
+async function cleanupCategories(request) {
+  const headers = { Authorization: `Bearer ${await apiToken(request, ADMIN)}` };
+  const categories = await (await request.get(`${API}/api/categories`)).json();
+  for (const c of categories.filter((c) => c.id > 3)) {
+    const res = await request.delete(`${API}/api/categories/${c.id}`, { headers });
+    expect(res.ok(), `xóa danh mục ${c.id}`).toBe(true);
+  }
+}
+
+module.exports = { API, USER, ADMIN, runBy, loginWeb, apiToken, resetProfile, getMe, goToCheckout, createTempUser, cleanupUsers, loginAdmin, openAdminTab, cleanupCategories };
