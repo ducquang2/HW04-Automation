@@ -32,8 +32,10 @@ test.describe('FR-09 Mã giảm giá', () => {
           userId = user.id;
           const coupons = await (await request.get(`${API}/api/coupons`, { headers })).json();
           const couponId = coupons.find((x) => x.code === c.code).id;
+          // Ghi lượt dùng phải thành công, nếu không D-09-08 có thể xanh vì user chưa dùng lượt nào
           for (let i = 0; i < c.priorUses; i++) {
-            await request.post(`${API}/api/coupon-usage`, { headers, data: { coupon_id: couponId } });
+            const usage = await request.post(`${API}/api/coupon-usage`, { headers, data: { coupon_id: couponId } });
+            expect(usage.ok()).toBe(true);
           }
         }
         const res = await request.post(`${API}/api/apply-coupon`, {
@@ -48,7 +50,11 @@ test.describe('FR-09 Mã giảm giá', () => {
           expect(body.final_amount).toBe(c.final);
         }
         // error: chỉ cần không success, không kiểm mã HTTP
-        if (c.expected === 'error') expect(body.success).not.toBe(true);
+        if (c.expected === 'error') {
+          expect(body.success).not.toBe(true);
+          // C4 không có câu lỗi để so (app đang trả success)
+          if (ERROR_TEXT[c.reason]) expect.soft(body.error).toContain(ERROR_TEXT[c.reason]);
+        }
         return;
       }
 
@@ -58,11 +64,12 @@ test.describe('FR-09 Mã giảm giá', () => {
       const totalInput = page.locator('label:has-text("Tổng tiền thanh toán") + input');
       if (c.total !== null) {
         await totalInput.fill(String(c.total));
-        await expect(totalInput).toHaveValue(String(c.total));
+        await expect.soft(totalInput).toHaveValue(String(c.total));
       }
       await page.getByPlaceholder('Nhập mã giảm giá...').fill(c.code);
       const applyButton = page.getByRole('button', { name: 'Áp dụng' });
-      await expect(applyButton).toBeEnabled();
+      // Assertion phụ dùng soft để không chặn assertion chính (lỗi giống FR-04, sửa ở 5fb63f7)
+      await expect.soft(applyButton).toBeEnabled();
       await applyButton.click();
 
       const error = page.locator('p.text-red-600');
