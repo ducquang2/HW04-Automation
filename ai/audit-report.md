@@ -384,3 +384,49 @@ Những điểm đã kiểm tra và không cần sửa:
 - `expected`, `discount`, `final` trong data đều theo công thức đặc tả, không có giá trị nào sửa cho khớp với app; dữ liệu nhập không viết cứng trong script.
 - `toNumber` giữ dấu `-` nên số âm của D-09-01 không bị đọc thành số dương (test vẫn đỏ đúng chỗ).
 - Helper cũ trong `helpers/common.js` không bị sửa ở bước này.
+
+## FR-14 CRUD danh mục
+
+### Bước 1 – Chọn test case
+
+- Thời gian: 2026-11-18 11:28
+- Công cụ: Claude Code subagent (dùng skill eshop-playwright-feature)
+- Prompt: `Đọc đặc tả FR-14 trong README EShop và test case HW02 ở HW02-20120359/features/FR-14/. Chọn 12 case tự động hóa được bằng Playwright, bỏ case trùng dữ liệu, nêu lý do loại từng case còn lại. Ghi tầng chạy (UI/API) và dự đoán Pass/Fail. Admin ở cổng 5174; dọn danh mục id > 3, không đụng 3 danh mục seed.`
+- Ngữ cảnh AI tự đọc: `HW02/features/FR-14/domain.md`, `bva.md`, `bugs.md`, `gap-analysis.md`, đặc tả FR-12 và FR-14 trong README EShop, `frontend-admin/src/App.jsx` (login, tab Danh mục), `backend/server.js` (`authenticateToken`, route `/api/categories`, `/api/products`), `backend/database.js` (bảng `categories`, `products`, seed). Không có route `/api/admin/categories`. Gọi thử bằng curl: `POST /api/categories` với `""`, `"   "`, body rỗng (token admin) và tên thường (token user) đều 200; `DELETE /api/categories/9999` bằng token user cũng 200. Đã xóa các danh mục tạo thử (id 4–7), còn đúng 3 danh mục seed.
+- Output:
+
+HW02 có 15 test case (10 Domain + 5 BVA). Bỏ 3 BVA trùng Domain và 2 BVA độ dài không có expected theo đặc tả, còn 10 case; thêm 2 case `AT-xx` cho thao tác Xóa, đủ 12 case:
+
+| # | ID HW02 | Nội dung | Dữ liệu | Expected theo đặc tả | Tầng | Dự đoán |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | D-14-01 | V1 thêm tên hợp lệ | `Phu kien Test FR14` | Thêm được, hiện trong bảng | UI | Pass: `App.jsx:142-147`, `server.js:249-254` |
+| 2 | D-14-02 | I1 tên rỗng | `""` | Từ chối, bảng không thêm dòng | UI | Fail: input không có `required` (`App.jsx:298-304`), backend không kiểm tra `name` (`server.js:250-251`) |
+| 3 | D-14-03 | I2 chỉ khoảng trắng | `"   "` | Từ chối (coi như rỗng) | UI | Fail: như case 2 |
+| 4 | D-14-04 | V2 tên 1 ký tự | `A` | Thêm được | UI | Pass: `server.js:249-254` |
+| 5 | D-14-05 | I4 trùng tên | `Phu kien Test FR14` 2 lần | Từ chối lần 2 (bổ sung HW02, đặc tả không nêu) | UI | Fail: không kiểm tra trùng, cột `name` không `UNIQUE` (`database.js:25`) |
+| 6 | D-14-06 | I5 chuỗi HTML/script | `<script>alert(1)</script>` | Tên hiện đúng dạng chữ, không chạy script (không bật dialog) | UI | Pass: React tự escape `{c.name}` (`App.jsx:320`) |
+| 7 | D-14-07 | A1 thêm không có token | `UnauthTest` | 401 | API | Pass: `server.js:103` |
+| 8 | D-14-08 | A2 user thường thêm danh mục | token `test@eshop.com`, `UserShouldNotCreate` | 403, không tạo | API | Fail: route chỉ có `authenticateToken`, không kiểm tra `role` (`server.js:100-110`, `249`) |
+| 9 | AT-01 | User thường xóa danh mục | admin tạo DM test (id > 3), user xóa | 403, DM còn trong list | API | Fail: `server.js:269` cũng chỉ `authenticateToken` |
+| 10 | AT-02 | Xóa danh mục qua UI | admin tạo DM test, bấm "Xóa" ở dòng đó | Dòng biến mất, `GET /api/categories` không còn id đó | UI | Pass: `App.jsx:153-157`, `323-326`, `server.js:269-276` |
+| 11 | D-14-09 | Xem danh sách | 3 DM seed | Bảng hiện đủ Điện thoại, Laptop, Phụ kiện, khớp `GET /api/categories` | UI | Pass: `App.jsx:49-50`, `318-330`, `server.js:243-247` |
+| 12 | D-14-10 | Xóa DM còn sản phẩm (đổi sang DM test) | tạo DM test + 1 SP có `category_id` = DM đó, rồi xóa DM | Từ chối xóa, hoặc không còn SP trỏ tới id đã xóa (bổ sung HW02) | API | Fail: `server.js:269-276` xóa thẳng, `products.category_id` không có khóa ngoại (`database.js:70`) |
+
+Case thêm mới:
+- AT-01: FR-12 yêu cầu `DELETE /api/categories` cũng phải là admin, HW02 chỉ thử `POST` bằng user (D-14-08).
+- AT-02: HW02 không có case Xóa thành công (D-14-10 là xóa có sản phẩm), mà FR-14 có thao tác Xóa.
+
+Case bị loại:
+- B-14 rỗng `""` = D-14-02.
+- B-14 khoảng trắng `"   "` = D-14-03.
+- B-14 1 ký tự `A` = D-14-04.
+- B-14 dài 255 và 256 ký tự: đặc tả FR-14 không có độ dài tối đa, HW02 chỉ ghi "không crash" (Pass*), không có expected theo đặc tả để assert; phía hợp lệ đã có D-14-01, D-14-04.
+
+Ghi chú:
+- D-14-10 trong HW02 xóa DM seed id 1: không tự động hóa được vì không có API khôi phục, tạo lại bằng `POST` sẽ ra id mới (cột `AUTOINCREMENT`), 5 SP seed vẫn trỏ `category_id` 1–3, các feature khác và browser sau sẽ hỏng. Đổi sang DM do test tạo (id > 3) và 1 SP test (id > 5, `POST /api/products`); `afterEach` xóa SP id > 5 rồi DM id > 3.
+- D-14-08, AT-01 phải chạy API: admin UI chặn user thường ngay lúc login (`App.jsx:65-66`, chỉ chặn ở frontend) nên không thao tác được bằng UI.
+- Case UI bị từ chối (2, 3, 5) nếu app sửa đúng có thể bật `alert("Lỗi thêm DM...")` (`App.jsx:149`); script phải bắt `dialog` trước khi bấm "Thêm mới" để `click()` không treo (bẫy đã gặp ở FR-04).
+- D-14-06 HW02 ghi Fail vì DB lưu nguyên chuỗi; đặc tả không cấm lưu, nên Bước 1 chỉ kiểm tra không chạy script khi hiển thị, dự đoán Pass.
+- Đặc tả FR-14 chỉ có Thêm/Xem/Xóa; route `PUT /api/categories/:id` có trong code (`server.js:257`) nhưng không test. `DELETE` id không tồn tại vẫn trả 200, đặc tả không nêu nên không thêm case.
+- Dữ liệu dùng chung: chỉ tạo/xóa DM id > 3 và SP id > 5; `beforeEach`/`afterEach` dọn bằng token admin, sau khi chạy `GET /api/categories` phải còn đúng 3 DM seed.
+- Dự đoán: 6 Fail (case 2, 3, 5, 8, 9, 12), khớp BUG-14-01 (#46), BUG-14-02 (#47), BUG-14-03 (#48, AT-01 cùng nguyên nhân), BUG-14-04 (#49) của HW02.
