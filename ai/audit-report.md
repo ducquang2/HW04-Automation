@@ -430,3 +430,60 @@ Ghi chú:
 - Đặc tả FR-14 chỉ có Thêm/Xem/Xóa; route `PUT /api/categories/:id` có trong code (`server.js:257`) nhưng không test. `DELETE` id không tồn tại vẫn trả 200, đặc tả không nêu nên không thêm case.
 - Dữ liệu dùng chung: chỉ tạo/xóa DM id > 3 và SP id > 5; `beforeEach`/`afterEach` dọn bằng token admin, sau khi chạy `GET /api/categories` phải còn đúng 3 DM seed.
 - Dự đoán: 6 Fail (case 2, 3, 5, 8, 9, 12), khớp BUG-14-01 (#46), BUG-14-02 (#47), BUG-14-03 (#48, AT-01 cùng nguyên nhân), BUG-14-04 (#49) của HW02.
+
+### Bước 2 – Khảo sát giao diện, chọn locator
+
+- Thời gian: 2026-11-18 11:31
+- Công cụ: Claude Code subagent (dùng skill eshop-playwright-feature)
+- Prompt: `Đọc file .jsx của trang FR-14, liệt kê locator cho từng phần tử cần dùng trong 12 case, kèm lý do chọn. Chạy thử từng locator trên app đang chạy, báo số phần tử khớp.`
+- Quyết định của sinh viên sau Bước 1: (1) thay case 5 (D-14-05 trùng tên) và case 12 (D-14-10 xóa DM còn SP) vì đặc tả FR-14 không quy định, thay bằng AT-03 (thêm DM, reload, DM vẫn còn) và AT-04 (DM mới có trong `select` danh mục ở tab "Sản phẩm"); D-14-05 (BUG-14-02, #47) và D-14-10 (BUG-14-04, #49) đưa vào mục "chưa tự động hóa" của report, lý do đặc tả không quy định; (2) giữ case 6 `<script>`, expected script không chạy khi hiển thị, dự đoán Pass; (3) case 7, 8, 9 chạy API, còn lại UI; (4) không tạo sản phẩm test.
+
+| # | ID | Nội dung | Tầng | Dự đoán |
+| --- | --- | --- | --- | --- |
+| 1 | D-14-01 | Thêm tên hợp lệ | UI | Pass |
+| 2 | D-14-02 | Tên rỗng | UI | Fail |
+| 3 | D-14-03 | Tên chỉ khoảng trắng | UI | Fail |
+| 4 | D-14-04 | Tên 1 ký tự | UI | Pass |
+| 5 | AT-03 | Thêm DM, reload, DM vẫn còn trong bảng | UI | Pass: token ở `localStorage`, reload gọi lại `fetchData` (`App.jsx:7`, `34-50`), DM đã lưu DB |
+| 6 | D-14-06 | Chuỗi `<script>` không chạy khi hiển thị | UI | Pass |
+| 7 | D-14-07 | Thêm không có token → 401 | API | Pass |
+| 8 | D-14-08 | User thường thêm → 403 | API | Fail |
+| 9 | AT-01 | User thường xóa → 403 | API | Fail |
+| 10 | AT-02 | Xóa DM qua UI | UI | Pass |
+| 11 | D-14-09 | Xem danh sách 3 DM seed | UI | Pass |
+| 12 | AT-04 | DM mới có trong `select` tab Sản phẩm | UI | Pass: `select` map từ `categories` (`App.jsx:538-542`), thêm DM xong `fetchData` cập nhật lại |
+
+  Dự đoán còn 4 Fail (case 2, 3, 8, 9).
+- Ngữ cảnh AI tự đọc: `frontend-admin/src/App.jsx` (login `188-215`, menu `226-272`, tab Danh mục `294-335`, form sản phẩm `483-543`, `handleCategorySubmit`/`deleteCategory` `142-160`), `backend/server.js` (`authenticateToken` `100-110`, route `/api/categories` `243-278`), `helpers/common.js`.
+- Output (chạy thử bằng script tạm trên Chromium, đăng nhập admin, thêm `Phu kien Test FR14`, `<script>alert(1)</script>` và tên rỗng qua UI, reload, xem tab Sản phẩm, xóa DM test qua UI, gọi API case 7–9; mỗi locator khớp đúng 1 trừ chỗ ghi rõ):
+
+| Phần tử | Locator | Khớp | Lý do chọn |
+| --- | --- | --- | --- |
+| Ô Email (login) | `getByPlaceholder('Email')` | 1 | Form login không có label, chỉ có placeholder |
+| Ô Password | `getByPlaceholder('Password')` | 1 | Như trên |
+| Nút Login | `getByRole('button', { name: 'Login' })` | 1 | Tên nút duy nhất |
+| Tiêu đề sau đăng nhập | `getByRole('heading', { name: 'EShop Admin' })` | 1 | Chờ trang admin tải xong |
+| Menu Danh mục | `getByText('Danh mục', { exact: true })` | 1 | Menu là `li` có `onClick`, không phải link/button; `getByRole('listitem', { name: 'Danh mục' })` = 0 vì `li` không lấy tên từ chữ. Cần `exact` để không khớp "Quản lý Danh mục" |
+| Menu Sản phẩm | `getByText('Sản phẩm', { exact: true })` | 1 | Như trên, `exact` để không khớp "Thêm sản phẩm mới", "Quản lý Sản phẩm" |
+| Tiêu đề tab Danh mục | `getByRole('heading', { name: 'Quản lý Danh mục' })` | 1 | Chờ tab render trước khi đếm dòng |
+| Ô tên danh mục | `getByPlaceholder('Tên danh mục mới')` | 1 | Không có label; placeholder duy nhất |
+| Nút Thêm mới | `getByRole('button', { name: 'Thêm mới' })` | 1 | Tên nút duy nhất |
+| Các dòng bảng | `locator('tbody tr')` | 3 | Ở tab Danh mục chỉ có 1 bảng; dùng để đếm số dòng (case 2, 3 tên rỗng không lọc theo tên được) và case 11 |
+| Dòng của 1 DM | `locator('tbody tr').filter({ has: getByRole('cell', { name: <tên>, exact: true }) })` | 1 | Lọc theo ô tên; đã thử 3 DM seed, `Phu kien Test FR14`, `<script>alert(1)</script>` đều khớp 1 |
+| Nút Xóa của 1 DM | `<dòng>.getByRole('button', { name: 'Xóa' })` | 1 | Cả bảng có 3 nút "Xóa" trùng tên, phải khoanh theo dòng |
+| Tiêu đề tab Sản phẩm | `getByRole('heading', { name: 'Quản lý Sản phẩm' })` | 1 | Chờ tab render |
+| `select` danh mục | `getByRole('combobox')` | 1 | Tab Sản phẩm chỉ có 1 `select`, không có label/name |
+| Option DM test | `getByRole('combobox').getByRole('option', { name: <tên>, exact: true })` | 1 | Case AT-04; option chỉ có chữ là tên DM |
+
+Ghi chú:
+- App báo kết quả bằng cách cập nhật bảng, không có câu thông báo thành công, không chuyển trang. Thêm thành công: ô tên được xóa về `""` và có dòng mới `#<id> | <tên>`. Thêm/xóa lỗi mới bật `alert("Lỗi thêm DM: ...")` / `alert("Lỗi xóa DM: ...")` (`App.jsx:149`, `158`). Lần chạy thử không có dialog nào (kể cả tên rỗng và `<script>`).
+- Tên rỗng qua UI: không alert, bảng thêm 1 dòng tên trống (3 → 6 dòng sau 3 lần thêm), đúng dự đoán Fail case 2. Case 2, 3 assert theo số dòng `tbody tr` và `GET /api/categories`, không lọc theo tên.
+- `<script>alert(1)</script>` hiện đúng dạng chữ trong ô (lọc `cell` theo đúng chuỗi khớp 1), không bật dialog.
+- Vẫn phải đăng ký `page.on('dialog')`/`waitForEvent('dialog')` trước khi bấm "Thêm mới" ở case 2, 3: nếu app sửa đúng bằng `alert` thì `click()` sẽ treo (bẫy alert đồng bộ).
+- Giữ đăng nhập: token lưu ở `localStorage` key `adminToken` (`App.jsx:70`). Reload không mất đăng nhập (không còn ô Email), nhưng `activeTab` là state nên reload quay về **Dashboard**, phải bấm lại menu "Danh mục" (case AT-03). DM test vẫn còn sau reload.
+- Tab Sản phẩm: `select` có đủ option của mọi DM, kể cả DM test, `<script>` và option rỗng. Chỉ xem, không bấm "Lưu sản phẩm".
+- Xóa qua UI: bấm "Xóa" ở dòng DM test → dòng biến mất, không có confirm.
+- `fetchData` gọi `/admin/users` trước `/categories` (`App.jsx:41-50`); nếu 1 API lỗi thì bảng DM không tải. Không gặp khi chạy thử.
+- API cho case 7–9 (đã gọi thử): `POST /api/categories` không token → 401 `Unauthorized`; token `test@eshop.com` → 200 tạo được (Fail); admin tạo DM rồi token user `DELETE` → 200 xóa được (Fail). Id dùng `AUTOINCREMENT` (DM thử ra `#8`, không tái dùng id 4–7), nên assert theo tên/id trả về, không đoán id.
+- `helpers/common.js` có `ADMIN` nhưng chưa export, Bước 4 cần thêm vào `module.exports` (hoặc helper dọn DM id > 3).
+- Sau khi chạy thử, đã xóa DM id 9–11 bằng token admin (id 8 đã xóa qua UI); `GET /api/categories` còn đúng 3 DM seed.
