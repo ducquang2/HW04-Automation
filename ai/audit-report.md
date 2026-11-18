@@ -619,3 +619,11 @@ Những điểm đã kiểm tra và không cần sửa:
 - `created`: `toHaveValue('')` (hành vi app) đã là `expect.soft` và đứng trước assertion chính.
 - `expected`, `expectedNames` trong data theo đặc tả, không có giá trị nào sửa cho khớp app; không viết dữ liệu trong script.
 - Helper cũ trong `helpers/common.js` không bị sửa ở bước này.
+
+## Bug report
+
+- Thời gian: 2026-11-18 11:54
+- Công cụ: Claude Code subagent
+- Prompt: `Từ các test đỏ do lỗi EShop, viết report/bugs.md và chuẩn bị nội dung issue trên kqanGit/eshop-sut (tiêu đề [FR-xx] ..., nhãn Quang, FR-xx, HW04, kèm screenshot từ report). Bug đã có ở HW02 thì dẫn link issue cũ.`
+- Ngữ cảnh AI tự đọc: `reports/FR-*/index.html` (report.json giải nén từ zip base64) và ảnh `reports/*/data/*.png`, mục Bước 6–7 của FR-04/09/14 trong `ai/audit-report.md`, `HW02-20120359/features/FR-04|FR-09|FR-14/bugs.md`, `eshop-sut/README.md`, `eshop-sut/backend/server.js`, `frontend-web/src/pages/Profile.jsx`, `tests/FR-04|09|14.spec.js`, `data/FR-04|09|14.json`, `helpers/common.js`, `playwright.config.js`.
+- Output: `report/bugs.md` (9 bug), `report/bug-screenshots/` (5 ảnh, lấy từ report Chromium); BUG-HW04-03, 06, 08, 09 không có ảnh vì test chỉ gọi API, ảnh lúc fail là trang trắng, bằng chứng là thông báo lỗi/annotation `response` trong report. Ảnh FR-04 không có alert (Playwright chụp sau khi dialog đóng), nội dung alert ghi theo annotation `alert`.
