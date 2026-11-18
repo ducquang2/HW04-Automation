@@ -351,3 +351,29 @@ Tổng cộng 5 kiểu assertion: hiển thị, nội dung, giá trị ô, trạ
   - Kết quả báo bằng text trên trang (không phải alert) nên ảnh chụp và snapshot `error-context.md` lúc fail giữ được bằng chứng: D-09-05, B-09-05 có dòng lỗi "chưa đủ giá trị tối thiểu", D-09-01 có khối xanh với số âm.
   - Cả 3 bug đã có issue từ HW02; khi log bug HW04 sẽ mở issue mới nhãn `HW04`, dẫn link issue cũ.
   - Sau khi chạy: `GET /api/admin/users` chỉ còn id 1, 2; `apply-coupon` SAVE10 với `user_id: 2` vẫn `success`. Chạy với `--reporter=list` nên không sinh HTML report; đã xóa `test-results/`.
+
+### Bước 7 – Review
+
+- Thời gian: 2026-11-18 11:22
+- Công cụ: Claude Code subagent (dùng skill eshop-playwright-feature)
+- Prompt: `Review lại toàn bộ FR-xx.spec.js và data, lập bảng "AI sai gì / thiếu gì / vì sao / đã sửa thế nào" dựa trên lỗi thật trong các bước trước, kèm commit tương ứng.`
+- Output: đọc lại `tests/FR-09.spec.js`, `data/FR-09.json`, `helpers/common.js`, sửa 3 chỗ trong `tests/FR-09.spec.js` ở commit `7f685ea` (dòng 3, 4, 5 dưới đây). Chạy lại Chromium: vẫn 8 pass, 4 fail (D-09-01, D-09-05, D-09-06, B-09-05), cùng thông báo lỗi như Bước 5–6; câu lỗi C5 mới thêm khớp ở D-09-07, D-09-09. Sau khi chạy `GET /api/admin/users` chỉ còn id 1, 2; đã xóa `reports/FR-09-chromium` và `test-results/`. Bảng review:
+
+| # | Bước | AI sai / thiếu gì | Vì sao | Đã sửa thế nào | Commit |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 2 | (Tránh được) Gọi `count()` ngay sau click ra 0 phần tử khi chạy thử locator | Trang chưa render xong, `count()` không tự chờ | Chờ tiêu đề trang hoặc dùng `expect` tự chờ trước khi đếm; trong spec chỉ dùng `expect(...).toBeVisible()` / `toHaveCount` | – |
+| 2 | 2 | (Tránh được) Câu thông báo do backend tạo dùng dấu phẩy (`300,000 ₫`), khác số tiền frontend in theo `vi-VN` (`300.000 ₫`) | Backend gọi `toLocaleString()` trên Node (locale mặc định), frontend dùng locale browser | Số tiền đọc trong `strong` rồi đổi bằng `toNumber`; câu lỗi chỉ so phần chữ (không có số) và dùng `expect.soft` | `e25f960` |
+| 3 | 5 | Đặt 2 assertion phụ (`toBeEnabled` nút Áp dụng, `toHaveValue` ô Tổng tiền) bằng `expect` thường trước khi bấm. Nếu fail thì test dừng, không tới assertion chính (số tiền giảm / dòng lỗi) | Lặp lại đúng lỗi đã sửa ở FR-04 (`5fb63f7`): AI xếp assertion phụ lên trước assertion chính. Bước 6 không fail trên browser nào nên chưa lộ ra | Đổi 2 assertion thành `expect.soft`. Hạn chế: nếu nút Áp dụng thật sự bị `disabled` thì `click()` vẫn chờ tới timeout, nhưng report vẫn ghi lý do là nút bị khóa | `7f685ea` |
+| 4 | 4–5 | Không kiểm tra `POST /api/coupon-usage` khi ghi lượt dùng trước. Nếu ghi lỗi thì D-09-08 (còn 1/2 lượt) vẫn xanh vì user chưa dùng lượt nào, tức xanh vì lý do sai | AI coi bước chuẩn bị dữ liệu luôn thành công | Thêm `expect(usage.ok()).toBe(true)` sau mỗi lần ghi lượt | `7f685ea` |
+| 5 | 5 | Khai báo `ERROR_TEXT.C5` nhưng nhánh API không dùng; case `error` qua API chỉ assert "không success" nên D-09-07, D-09-09 có thể xanh vì lỗi khác (vd sai mã, chưa đủ ngưỡng) | AI viết bảng câu lỗi chung nhưng chỉ gắn vào nhánh UI | Thêm `expect.soft(body.error).toContain(ERROR_TEXT[c.reason])` cho case API có câu lỗi (C5); C4 không có câu để so vì app đang trả `success` | `7f685ea` |
+| 6 | 5 | Trong log Bước 5 ghi lỗi công thức percent là BUG-09-01, đúng phải là BUG-09-02 (#16) | Lỗi do prompt của người điều phối ghi nhầm ID, AI chép theo, không đối chiếu `bugs.md` của HW02 | Sửa ID trong audit khi ghi Bước 6 | `94adb04` |
+| 7 | 1 | Case 4, 5, 11, 12 (test biên ngưỡng) phải sửa ô "Tổng tiền thanh toán", dựa vào lỗi FR-08 (ô này sửa được) | Sản phẩm rẻ nhất 4.000.000 ₫, lớn hơn mọi ngưỡng; không có cách khác tạo tổng 299.999 / 300.000 / 499.999 / 500.000 qua UI | Không sửa: ghi vào gap analysis. Nếu FR-08 được sửa thì 4 case này chuyển sang tầng API | – |
+| 8 | 1 | Case C5 (D-09-07/08/09) không dùng được user test, vì không có API xóa `coupon_usage` | Dùng `test@eshop.com` thì chạy 1 lần là hết lượt SAVE10, các case 1, 4, 5 và browser sau đỏ sai | Mỗi test tạo user tạm, `afterEach` xóa user bằng token admin. Dòng `coupon_usage` của user đã xóa vẫn còn trong DB (không ảnh hưởng user khác vì id `AUTOINCREMENT`); ghi vào gap analysis | – |
+
+Những điểm đã kiểm tra và không cần sửa:
+- Không có `waitForTimeout`; mọi chỗ chờ đều dùng `expect` tự chờ. `error.isVisible()` chỉ gọi sau khi `expect(error.or(saving)).toBeVisible()` đã chờ xong nên không đọc sớm.
+- Selector đều là role, placeholder, `label + input` hoặc chữ hiển thị; chỉ `p.text-red-600` dùng class vì dòng lỗi không có id/role (đã ghi ở Bước 2).
+- `beforeEach` và `afterEach` cùng gọi `cleanupUsers`; case UI chỉ bấm Áp dụng, không bấm thanh toán nên `test@eshop.com` không bị ghi lượt dùng (SAVE10 với `user_id: 2` vẫn `success` sau khi chạy).
+- `expected`, `discount`, `final` trong data đều theo công thức đặc tả, không có giá trị nào sửa cho khớp với app; dữ liệu nhập không viết cứng trong script.
+- `toNumber` giữ dấu `-` nên số âm của D-09-01 không bị đọc thành số dương (test vẫn đỏ đúng chỗ).
+- Helper cũ trong `helpers/common.js` không bị sửa ở bước này.
