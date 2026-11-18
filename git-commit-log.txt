@@ -1,0 +1,30 @@
+26288d0 | 2026-11-18 12:59:30 +0700 | ducquang2 | docs(readme): thêm link video, điểm tự chấm, xuất lại PDF báo cáo
+0eae326 | 2026-11-18 12:17:15 +0700 | ducquang2 | docs(readme): README tự chấm, test summary, cách chạy
+c02ead4 | 2026-11-18 12:15:31 +0700 | ducquang2 | docs(ai): AI critique, PDF critique và audit, xuất lại PDF báo cáo
+abadfe5 | 2026-11-18 12:13:18 +0700 | ducquang2 | docs(report): báo cáo chính main-report.md và PDF
+fc912eb | 2026-11-18 12:08:31 +0700 | ducquang2 | docs(bugs): thêm ảnh trang GitHub Issues
+a506a8a | 2026-11-18 12:02:37 +0700 | ducquang2 | docs(bugs): điền số issue HW04 #165-#173
+e6c66dc | 2026-11-18 11:56:24 +0700 | ducquang2 | docs(bugs): bug report 9 bug HW04 kèm ảnh từ report
+152f7c8 | 2026-11-18 11:52:09 +0700 | ducquang2 | test(run): 9 HTML report chính thức (3 feature x 3 browser)
+108058b | 2026-11-18 11:48:06 +0700 | ducquang2 | docs(FR-14): bảng review AI sai gì, vì sao, sửa thế nào
+6c70465 | 2026-11-18 11:48:06 +0700 | ducquang2 | fix(FR-14): assertion listed không phụ thuộc thứ tự, kiểm tra token user
+2dee495 | 2026-11-18 11:43:58 +0700 | ducquang2 | docs(FR-14): ghi kết quả chạy 3 browser và phân loại test đỏ vào AI audit
+66976fa | 2026-11-18 11:40:43 +0700 | ducquang2 | test(FR-14): thêm assertion theo đặc tả, đổi sang assertion tự chờ
+9852cce | 2026-11-18 11:38:20 +0700 | ducquang2 | test(FR-14): data JSON và khung spec, dọn danh mục id > 3 bằng API
+b396a02 | 2026-11-18 11:32:07 +0700 | ducquang2 | docs(FR-14): ghi AI audit bước 2 (locator, thay 2 case ngoài đặc tả)
+58bc696 | 2026-11-18 11:29:32 +0700 | ducquang2 | docs(FR-14): ghi AI audit bước 1 (chọn test case)
+7c2f124 | 2026-11-18 11:26:41 +0700 | ducquang2 | docs(skill): thêm bẫy và bài học từ FR-09 vào Agent Skill
+7cd6487 | 2026-11-18 11:23:44 +0700 | ducquang2 | docs(FR-09): bảng review AI sai gì, vì sao, sửa thế nào
+7f685ea | 2026-11-18 11:23:44 +0700 | ducquang2 | fix(FR-09): assertion phụ dùng expect.soft, kiểm tra ghi lượt dùng và câu lỗi C5
+94adb04 | 2026-11-18 11:20:59 +0700 | ducquang2 | docs(FR-09): ghi kết quả chạy 3 browser và phân loại test đỏ vào AI audit
+e25f960 | 2026-11-18 11:10:26 +0700 | ducquang2 | test(FR-09): thêm assertion theo đặc tả cho applied/error ở UI và API
+bad47a4 | 2026-11-18 11:06:36 +0700 | ducquang2 | test(FR-09): data JSON và khung spec, dọn user tạm bằng API
+870d292 | 2026-11-18 10:55:31 +0700 | ducquang2 | docs(FR-09): ghi AI audit bước 1-2 (chọn test case, locator)
+c8cc393 | 2026-11-18 10:36:21 +0700 | ducquang2 | docs(skill): Agent Skill tự động hóa feature EShop theo 7 bước
+b6345dd | 2026-11-18 10:34:04 +0700 | ducquang2 | docs(FR-04): bảng review AI sai gì, vì sao, sửa thế nào
+5fb63f7 | 2026-11-18 10:33:45 +0700 | ducquang2 | fix(FR-04): dùng expect.soft cho câu chữ alert để luôn kiểm tra database
+316ef4c | 2026-11-17 20:49:06 +0700 | ducquang2 | docs(FR-04): ghi kết quả chạy 3 browser và phân loại test đỏ vào AI audit
+cd78fe5 | 2026-11-17 15:34:34 +0700 | ducquang2 | test(FR-04): thêm assertion cho 5 loại expected
+f5e2f0e | 2026-11-17 15:31:14 +0700 | ducquang2 | test(FR-04): khung spec đọc data JSON, dọn hồ sơ bằng API
+bc65249 | 2026-11-17 15:02:43 +0700 | ducquang2 | chore(setup): chuyển sang pnpm
+ac2248e | 2026-11-17 14:59:10 +0700 | ducquang2 | chore(setup): khởi tạo Playwright, config 3 browser và test đăng nhập mẫu
