@@ -166,3 +166,83 @@ Những điểm đã kiểm tra và không cần sửa:
 - Thời gian: 2026-11-18 10:36
 - Prompt: `Viết skills/<tên>/SKILL.md từ 7 bước đã làm với FR-04: đầu vào, các bước, điểm dừng để mình review, định dạng đầu ra, và các bẫy của EShop đã gặp.`
 - Output: `skills/eshop-playwright-feature/SKILL.md` gồm: bảng đầu vào; quy tắc chung (expected theo đặc tả, data JSON riêng, không `waitForTimeout`, ghi audit, format commit); 7 bước, mỗi bước kết thúc bằng một điểm dừng cho người review; bảng file đầu ra; 10 bẫy EShop gặp khi làm FR-04 (label không gắn input, alert đồng bộ làm `click()` treo, `PUT /api/users/me` ghi đè cột, backend nhận `role`, bong bóng HTML5, ảnh chụp không có alert...).
+
+## FR-09 Mã giảm giá
+
+### Bước 1 – Chọn test case
+
+- Thời gian: 2026-11-18 10:42
+- Công cụ: Claude Code subagent (dùng skill eshop-playwright-feature)
+- Prompt: `Đọc đặc tả FR-09 trong README EShop và test case HW02 ở HW02-20120359/features/FR-09/. Chọn 12 case tự động hóa được bằng Playwright, bỏ case trùng dữ liệu, nêu lý do loại từng case còn lại. Ghi tầng chạy (UI/API) và dự đoán Pass/Fail. Sản phẩm rẻ nhất 4.000.000 ₫ nên test biên phải sửa ô Tổng tiền ở checkout; ghi rõ test dựa vào lỗi này của FR-08.`
+- Ngữ cảnh AI tự đọc: `HW02/features/FR-09/domain.md`, `bva.md`, `bugs.md`, `gap-analysis.md`, đặc tả FR-08 và FR-09 trong README EShop, `frontend-web/src/pages/Checkout.jsx`, `frontend-web/src/App.jsx`, `backend/server.js` (route `/api/apply-coupon`, `/api/coupon-usage`, `/api/register`), `backend/database.js` (seed coupon, sản phẩm, user). Gọi thử `POST /api/apply-coupon` với SAVE10/VIP100/BIGBUY để biết user test chưa dùng mã nào.
+- Output:
+
+HW02 có 17 test case (11 Domain + 6 BVA). 5 case trùng dữ liệu nên bỏ, còn đúng 12 case:
+
+| # | ID HW02 | Nội dung | Mã | Tổng đơn | Expected theo đặc tả | Tầng | Dự đoán |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | D-09-01 | Happy path percent | SAVE10 | 4.000.000 (giỏ thật, không sửa) | Áp được, giảm 400.000, thành tiền 3.600.000 | UI | Fail: `server.js:399-401` tính `total × (1 - 10)` nên giảm -36.000.000, thành tiền 40.000.000 |
+| 2 | D-09-02 | C1 mã không tồn tại | FAKEMAC | 4.000.000 | Báo lỗi, không giảm | UI | Pass: `server.js:373-377` |
+| 3 | D-09-03 | C2 mã hết hạn | EXPIRED | 4.000.000 | Báo hết hạn, không giảm | UI | Pass: `server.js:382-384` |
+| 4 | D-09-04 | C3 dưới ngưỡng | SAVE10 | 299.999 (sửa ô) | Báo chưa đủ ngưỡng | UI | Pass: `server.js:379`, `435-437` |
+| 5 | D-09-05 | C3 đúng ngưỡng | SAVE10 | 300.000 (sửa ô) | Áp được, giảm 30.000, thành tiền 270.000 | UI | Fail: `server.js:379` dùng `>` thay `>=` |
+| 6 | D-09-06 | C4 chưa đăng nhập | SAVE10 | 300.001 | Bị từ chối | API (không gửi JWT, `user_id: null`) | Fail: `server.js:363` không có `authenticateToken`, nhánh `416-432` vẫn áp mã |
+| 7 | D-09-07 | C5 SAVE10 đã dùng 1/1 | SAVE10 | 4.000.000 | Báo hết lượt | API | Pass: `server.js:391-395` |
+| 8 | D-09-08 | C5 VIP100 đã dùng 1/2 | VIP100 | 4.000.000 | Áp được, giảm 100.000 | API | Pass: `server.js:391`, `403` |
+| 9 | D-09-09 | C5 VIP100 đã dùng 2/2 | VIP100 | 4.000.000 | Báo hết lượt | API | Pass: `server.js:391-395` |
+| 10 | D-09-11 | Công thức fixed | VIP100 | 4.000.000 (giỏ thật) | Giảm 100.000, thành tiền 3.900.000 | UI | Pass: `server.js:403`, `406` |
+| 11 | B-09-04 | BIGBUY dưới ngưỡng | BIGBUY | 499.999 (sửa ô) | Báo chưa đủ ngưỡng | UI | Pass: `server.js:379`, `435-437` |
+| 12 | B-09-05 | BIGBUY đúng ngưỡng | BIGBUY | 500.000 (sửa ô) | Áp được, giảm 50.000, thành tiền 450.000 | UI | Fail: `server.js:379` dùng `>` |
+
+Case bị loại (trùng dữ liệu):
+- D-09-10 (SAVE10, 300.001, kiểm tra công thức percent) = D-09-01: cùng mã, cùng mục tiêu kiểm số tiền giảm; D-09-01 đã assert số tiền.
+- B-09-01 (SAVE10, 299.999) = D-09-04.
+- B-09-02 (SAVE10, 300.000) = D-09-05.
+- B-09-03 (SAVE10, 300.001) = D-09-01 / D-09-10 (ngưỡng trên đã có ở case 1 với 4.000.000).
+- B-09-06 (VIP100 lượt 0→1→2→3) = D-09-08 + D-09-09 gộp lại.
+
+Ghi chú:
+- Case dựa vào lỗi FR-08: case 4, 5, 11, 12. Sản phẩm rẻ nhất là Keychron Q1 4.000.000 ₫ (`database.js`), lớn hơn mọi ngưỡng, nên muốn có tổng 299.999 / 300.000 / 499.999 / 500.000 phải sửa ô "Tổng tiền thanh toán" ở checkout. Ô này sửa được (`Checkout.jsx:93-102`, `type="number"` không khóa) là lỗi FR-08 (đặc tả: không cho sửa tổng tiền), và giá trị ô được gửi thẳng làm `total_amount` (`Checkout.jsx:30`). Nếu FR-08 được sửa thì 4 case này phải chuyển sang tầng API.
+- Case 1, 2, 3, 10 dùng tổng thật 4.000.000 của giỏ, không cần sửa ô. D-09-01, D-09-03, D-09-11 đổi tổng so với HW02 (300.001 / 150.000) để không phụ thuộc FR-08.
+- Case 6 chạy API vì UI luôn gửi `user_id` lấy từ user đang đăng nhập (`Checkout.jsx:31`), không gửi JWT; route `/checkout` không chặn người chưa đăng nhập (`App.jsx:58`) nhưng gọi API thẳng rõ ràng hơn.
+- Case 7, 8, 9 (C5) khó tự động hóa: lượt dùng chỉ được ghi qua `POST /api/coupon-usage` (`server.js:444-449`) và không có API xóa `coupon_usage`, nên nếu dùng `test@eshop.com` thì chạy 1 lần là user test hết lượt SAVE10, các case 1, 4, 5 và lượt chạy browser sau sẽ đỏ sai. Cách làm đề xuất: mỗi test tạo user mới bằng `POST /api/register`, ghi sẵn lượt dùng bằng `POST /api/coupon-usage`, rồi gọi `apply-coupon`; `afterEach` xóa user bằng `DELETE /api/admin/users/:id` (dòng `coupon_usage` của user đã xóa vẫn còn trong DB nhưng không ảnh hưởng user khác).
+- Các case UI chỉ bấm "Áp dụng", không bấm "Xác Nhận Thanh Toán", vì thanh toán xong sẽ ghi lượt dùng (`Checkout.jsx:54-59`) cho `test@eshop.com`. Hiện user test chưa dùng mã nào (đã gọi thử `apply-coupon` SAVE10/VIP100/BIGBUY đều `success`).
+- Dự đoán: 4 Fail (case 1, 5, 6, 12), khớp BUG-09-01 (#15), BUG-09-02 (#16), BUG-09-03 (#17) của HW02.
+
+### Bước 2 – Khảo sát giao diện, chọn locator
+
+- Thời gian: 2026-11-18 10:46
+- Công cụ: Claude Code subagent (dùng skill eshop-playwright-feature)
+- Prompt: `Đọc file .jsx của trang FR-09, liệt kê locator cho từng phần tử cần dùng trong 12 case, kèm lý do chọn. Chạy thử từng locator trên app đang chạy, báo số phần tử khớp.`
+- Quyết định của sinh viên sau Bước 1: (1) giữ case 7–9, mỗi test tạo user mới bằng `POST /api/register`, ghi lượt dùng bằng `POST /api/coupon-usage`, `afterEach` xóa user bằng `DELETE /api/admin/users/:id` (token admin); (2) case 4, 5, 11, 12 chạy UI, sửa ô "Tổng tiền thanh toán"; (3) case 1, 3, 10 dùng tổng thật 4.000.000; (4) case 6 chạy API.
+- Ngữ cảnh AI tự đọc: `frontend-web/src/pages/Checkout.jsx`, `Cart.jsx`, `Home.jsx`, `App.jsx`, `context/CartContext.jsx`, `backend/server.js` (route `apply-coupon`, `coupon-usage`, `register`, `admin/users/:id`), `playwright.config.js` (locale `vi-VN`).
+- Output (chạy thử bằng script tạm trên Chromium, đăng nhập `test@eshop.com`, thêm Keychron Q1 vào giỏ, vào checkout, bấm Áp dụng với FAKEMAC/SAVE10/BIGBUY/VIP100/EXPIRED, không bấm thanh toán; mỗi locator khớp đúng 1 phần tử):
+
+| Phần tử | Locator | Khớp | Lý do chọn |
+| --- | --- | --- | --- |
+| Logo về trang chủ | `getByRole('link', { name: 'EShop', exact: true })` | 1 | Về Home bằng click để không mất giỏ |
+| Thẻ sản phẩm Keychron Q1 | `locator('div.border').filter({ has: getByRole('heading', { name: 'Bàn phím cơ Keychron Q1' }) })` | 1 | Thẻ không có id; lọc theo tên sản phẩm trong `h2` |
+| Nút Thêm vào giỏ | `<thẻ sản phẩm>.getByRole('button', { name: 'Thêm vào giỏ' })` | 1 | Cả trang có 5 nút cùng tên nên phải lấy trong thẻ |
+| Link Giỏ hàng (Header) | `getByRole('link', { name: 'Giỏ hàng' })` | 1 | Link duy nhất trên Header |
+| Tiêu đề trang giỏ | `getByRole('heading', { name: 'Giỏ Hàng' })` | 1 | Chờ trang giỏ tải xong |
+| Nút Tiến hành thanh toán | `getByRole('button', { name: 'Tiến hành thanh toán' })` | 1 | Tên nút duy nhất |
+| Tiêu đề trang checkout | `getByRole('heading', { name: 'Xác Nhận Đơn Hàng' })` | 1 | Chờ checkout tải xong |
+| Ô Tổng tiền thanh toán | `label:has-text("Tổng tiền thanh toán") + input` | 1 | Label không gắn `for` (`getByLabel` = 0); giữ kiểu giống FR-04. `getByRole('spinbutton')` cũng khớp 1 |
+| Ô Mã giảm giá | `getByPlaceholder('Nhập mã giảm giá...')` | 1 | Label "Mã Giảm Giá" không gắn input; placeholder duy nhất |
+| Nút Áp dụng | `getByRole('button', { name: 'Áp dụng' })` | 1 | Tên nút duy nhất; bị `disabled` khi ô mã trống, lúc đang gọi API đổi chữ thành `...` |
+| Dòng lỗi coupon | `locator('p.text-red-600')` | 1 | Chỉ hiện khi có lỗi; không có id/role nên dùng class |
+| Khối áp mã thành công | `locator('div.text-green-700')` | 1 | Chỉ hiện khi áp được mã, chứa câu "✅ Áp dụng thành công! ..." |
+| Số tiền giảm | `locator('p', { hasText: 'Tiết kiệm:' }).locator('strong')` | 1 | Lấy đúng số trong `strong`, không lẫn chữ |
+| Thành tiền sau giảm | `locator('p', { hasText: 'Thành tiền:' }).locator('strong')` | 1 | Như trên |
+| Dòng Tổng thanh toán | `getByText(/^Tổng thanh toán:/)` | 1 | Hiện tổng cuối (có mã thì là `final_amount`), dùng để assert thêm |
+| Nút Xác Nhận Thanh Toán | `getByRole('button', { name: 'Xác Nhận Thanh Toán' })` | 1 | Chỉ dùng để assert có nút, không bấm |
+
+Ghi chú:
+- App báo kết quả bằng text trên trang, không có `alert()`, không chuyển trang. Lỗi hiện ở `p.text-red-600` (vd "Mã giảm giá không tồn tại hoặc đã bị vô hiệu hóa", "Mã giảm giá đã hết hạn", "Đơn hàng chưa đủ giá trị tối thiểu 300,000 ₫ để áp dụng mã này"). Thành công hiện khối xanh với "Tiết kiệm" và "Thành tiền".
+- Số tiền do frontend in theo locale browser (`vi-VN` → `4.000.000 ₫`), còn câu thông báo do backend tạo nên dùng dấu phẩy (`300,000 ₫`, `Giảm 100,000 ₫`). Assert số tiền thì đọc trong `strong`; câu chữ thông báo để `expect.soft`.
+- Kết quả chạy thử khớp dự đoán Bước 1: FAKEMAC/EXPIRED báo lỗi; SAVE10 299.999 báo chưa đủ; SAVE10 300.000 và BIGBUY 500.000 vẫn báo chưa đủ (lỗi `>`); VIP100 4.000.000 giảm 100.000, còn 3.900.000; SAVE10 4.000.000 ra "Tiết kiệm -36.000.000 ₫", "Thành tiền 40.000.000 ₫".
+- Sửa ô Tổng tiền (`fill`) hoặc ô mã sẽ xóa kết quả/lỗi cũ (`Checkout.jsx:97-99`, `113`), nên mỗi case chỉ cần fill rồi bấm Áp dụng lại, không phải đi lại từ đầu.
+- Đường đi giữ giỏ: `loginWeb` → click logo → thêm Keychron → click link "Giỏ hàng" → "Tiến hành thanh toán". `page.goto('/cart')` làm giỏ trống ("Giỏ hàng của bạn đang trống") vì giỏ chỉ nằm trong React state. Ô Tổng tiền lấy giá trị `cartTotal` lúc vào checkout (4000000).
+- Phải chờ tiêu đề trang (hoặc dùng `expect` tự chờ) trước khi đếm/thao tác; gọi `count()` ngay sau click ra 0 vì trang chưa render.
+- API cho case 6–9 (đã gọi thử): case 6 gửi `apply-coupon` không JWT, `user_id: null`, SAVE10 300.001 → 200 `success` (lỗi, đúng dự đoán). Case 7–9: `register` trả `id` → `login` lấy token → `coupon-usage` với `coupon_id` (SAVE10 = 1, VIP100 = 3, lấy từ `GET /api/coupons`) → `apply-coupon` với `user_id` mới: SAVE10 1/1 → 400 "đã đạt giới hạn", VIP100 1/2 → 200 giảm 100.000, VIP100 2/2 → 400. `DELETE /api/admin/users/:id` bằng token admin → 200, user mất khỏi `GET /api/admin/users`. Bảng `users` dùng `AUTOINCREMENT` nên id không bị tái dùng, dòng `coupon_usage` cũ không dính sang user mới.
+- Sau khi chạy thử, `test@eshop.com` vẫn chưa dùng SAVE10 (gọi `apply-coupon` vẫn 200), user tạm đã xóa.
