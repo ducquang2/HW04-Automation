@@ -69,15 +69,16 @@ Mỗi bước kết thúc bằng một **điểm dừng**: trình bày kết qu�
 ### Bước 5 – Assertion
 
 1. Thêm assertion cho từng giá trị `expected`, ít nhất 3 kiểu: URL, hiển thị, nội dung, giá trị ô, thuộc tính, dialog, dữ liệu qua API.
-2. Assertion chính là assertion theo đặc tả (thường là dữ liệu đã lưu). Câu chữ thông báo lấy từ code app thì dùng `expect.soft` để test vẫn chạy tới assertion chính.
-3. Chạy Chromium, so số test đỏ với dự đoán ở bước 1.
-4. Commit `test(FR-xx): thêm assertion ...`.
+2. Assertion chính là assertion theo đặc tả (thường là dữ liệu đã lưu). Câu chữ thông báo lấy từ code app thì dùng `expect.soft` để test vẫn chạy tới assertion chính. Assertion phụ (trạng thái nút, giá trị ô) đặt trước assertion chính cũng phải dùng `expect.soft` (lỗi lặp lại ở cả FR-04 và FR-09).
+3. Mọi bước chuẩn bị dữ liệu qua API (ghi lượt dùng, tạo user) phải assert response ok, nếu không test có thể xanh vì lý do sai.
+4. Chạy Chromium, so số test đỏ với dự đoán ở bước 1.
+5. Commit `test(FR-xx): thêm assertion ...`.
 
 **Điểm dừng:** người dùng xem bảng assertion theo `expected` và danh sách test đỏ.
 
 ### Bước 6 – Chạy 3 browser, phân loại test đỏ
 
-1. Chạy `FEATURE=FR-xx pnpm exec playwright test tests/FR-xx.spec.js` (cả 3 project).
+1. Chạy `FEATURE=FR-xx pnpm exec playwright test tests/FR-xx.spec.js` (cả 3 project). Khi chạy chính thức không thêm `--reporter=list` (sẽ không ra HTML report).
 2. Với mỗi test đỏ: lỗi script hay lỗi EShop? Dẫn chứng bằng dòng code của app (file:dòng) hoặc nội dung lỗi/ảnh.
 3. Lỗi script: sửa và commit `fix(FR-xx): ...`. Lỗi EShop: giữ đỏ, gom thành bug, đối chiếu với issue HW02 nếu có.
 4. Ghi rõ case nào fail chỉ trên một browser.
@@ -118,5 +119,11 @@ Thư mục `reports/` chỉ chứa report của lượt chạy chính thức (`p
 | Đăng nhập lưu trong `localStorage` | – | Sau khi đăng nhập có thể `goto` và `reload` mà không mất đăng nhập |
 | Frontend chặn trước backend | Lỗi validate của backend không lộ ra khi test qua UI | Chọn tầng API cho case muốn kiểm tra backend; nếu giữ UI thì ghi vào gap analysis |
 | Ảnh chụp khi fail không có alert | Playwright chụp sau khi dialog đã đóng | Ghi nội dung alert vào annotation của test làm bằng chứng |
+| Giỏ hàng chỉ nằm trong React state | `goto('/cart')` hoặc `reload` làm giỏ trống | Đi bằng click: logo → Thêm vào giỏ → Giỏ hàng → Tiến hành thanh toán (helper `goToCheckout`) |
+| Backend và frontend in số tiền khác nhau | Câu thông báo backend có dấu phẩy (`300,000 ₫`), frontend in theo `vi-VN` (`4.000.000 ₫`) | So số tiền sau khi bỏ ký tự không phải số nhưng giữ dấu `-`; câu chữ dùng `expect.soft` |
+| `count()` không tự chờ | Gọi ngay sau click ra 0 phần tử vì trang chưa render | Chờ heading của trang hoặc dùng `expect` tự chờ |
+| Sửa ô Tổng tiền / ô mã xóa kết quả cũ | Dòng lỗi / khối giảm giá của lần trước biến mất | Mỗi case fill lại rồi bấm Áp dụng; không assert kết quả cũ sau khi sửa ô |
+| Lượt dùng coupon không có API xóa | Dùng `test@eshop.com` một lần là hết lượt, các case và browser sau đỏ sai | Case hết lượt tạo user tạm, ghi lượt qua `POST /api/coupon-usage`, xóa user (id > 2) bằng token admin ở `beforeEach`/`afterEach`; không bấm "Xác Nhận Thanh Toán" bằng user test |
+| Sản phẩm rẻ nhất 4.000.000 ₫ | Không tạo được tổng dưới ngưỡng coupon qua giỏ hàng | Test biên sửa ô "Tổng tiền thanh toán" (dựa vào lỗi FR-08), ghi rõ trong report |
 
 Khi làm feature mới, bẫy mới gặp được thêm vào bảng này.

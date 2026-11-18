@@ -167,6 +167,13 @@ Những điểm đã kiểm tra và không cần sửa:
 - Prompt: `Viết skills/<tên>/SKILL.md từ 7 bước đã làm với FR-04: đầu vào, các bước, điểm dừng để mình review, định dạng đầu ra, và các bẫy của EShop đã gặp.`
 - Output: `skills/eshop-playwright-feature/SKILL.md` gồm: bảng đầu vào; quy tắc chung (expected theo đặc tả, data JSON riêng, không `waitForTimeout`, ghi audit, format commit); 7 bước, mỗi bước kết thúc bằng một điểm dừng cho người review; bảng file đầu ra; 10 bẫy EShop gặp khi làm FR-04 (label không gắn input, alert đồng bộ làm `click()` treo, `PUT /api/users/me` ghi đè cột, backend nhận `role`, bong bóng HTML5, ảnh chụp không có alert...).
 
+### Cập nhật sau FR-09
+
+- Thời gian: 2026-11-18 11:25
+- Công cụ: Claude Code subagent
+- Prompt: `Cập nhật skills/eshop-playwright-feature/SKILL.md với các bẫy và bài học mới gặp khi làm FR-09.`
+- Output: thêm 6 bẫy vào bảng "Bẫy của EShop đã gặp": giỏ hàng chỉ nằm trong React state (đi bằng `goToCheckout`), backend/frontend in số tiền khác nhau (so số đã bỏ ký tự, giữ dấu `-`; câu chữ `expect.soft`), `count()` không tự chờ, sửa ô Tổng tiền/ô mã xóa kết quả cũ, lượt dùng coupon không có API xóa (user tạm, xóa id > 2 bằng token admin, không bấm thanh toán bằng user test), sản phẩm rẻ nhất 4.000.000 ₫ (test biên sửa ô Tổng tiền, dựa vào lỗi FR-08). Bước 5: assertion phụ đặt trước assertion chính cũng dùng `expect.soft`; thêm ý bước chuẩn bị dữ liệu qua API phải assert response ok. Bước 6: chạy chính thức không thêm `--reporter=list`.
+
 ## FR-09 Mã giảm giá
 
 ### Bước 1 – Chọn test case
