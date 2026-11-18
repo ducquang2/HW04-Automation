@@ -139,3 +139,24 @@ Ghi chú:
 - Alert không xuất hiện trong ảnh chụp lúc fail (Playwright chụp sau khi dialog đã đóng), nên dẫn chứng chính là nội dung alert trong thông báo lỗi và annotation `alert` của từng test.
 - BUG-04-03 (backend không kiểm tra SĐT) không lộ ra ở tầng UI vì regex frontend chặn trước, nên D-04-04, D-04-05, D-04-06 xanh. Đây là giới hạn của việc chạy các case này qua UI.
 - Cả 3 bug đã có issue từ HW02; khi log bug HW04 sẽ mở issue mới nhãn `HW04`, dẫn link issue cũ.
+
+### Bước 7 – Review
+
+- Thời gian: 2026-11-18 10:33
+- Prompt: `Review lại toàn bộ FR-04.spec.js và data, lập bảng "AI sai gì / thiếu gì / vì sao / đã sửa thế nào" dựa trên lỗi thật trong các bước trước, kèm commit tương ứng.`
+- Output: đọc lại `tests/FR-04.spec.js` và `data/FR-04.json`, phát hiện thêm 1 lỗi assertion (dòng 3 dưới đây) và sửa ở commit `5fb63f7`. Bảng review:
+
+| # | Bước | AI sai / thiếu gì | Vì sao | Đã sửa thế nào | Commit |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 4 | Chờ `click()` xong mới `accept()` alert, 8/12 test treo 30 giây ở `locator.click` | AI không để ý alert "SĐT không hợp lệ" gọi đồng bộ ngay trong `onSubmit`, chặn `click()` cho tới khi dialog đóng | Accept dialog ngay trong `.then` của `page.waitForEvent('dialog')`, không phụ thuộc `click()` | `f5e2f0e` |
+| 2 | 4 | Gọi `testInfo()` không tồn tại | Nhầm với tham số `testInfo` của hook; trong thân test phải dùng `test.info()` | Đổi thành `test.info()` | `f5e2f0e` |
+| 3 | 5 | Assert câu chữ alert bằng `expect` thường, đặt trước kiểm tra database. Khi alert sai, test dừng luôn nên report không cho thấy dữ liệu đã bị lưu sai (D-04-03 lưu `9123456789` nhưng report không ghi) | Câu chữ alert AI lấy từ code app (hành vi hiện tại), trong khi đặc tả chỉ nói về việc lưu hay không; AI xếp assertion phụ lên trước assertion chính | Đổi assertion câu chữ thành `expect.soft`, database luôn được kiểm tra; D-04-03 giờ báo cả "alert sai" lẫn "phone đã lưu `9123456789`" | `5fb63f7` |
+| 4 | 3 | Ghi chú lý do D-04-07/08 và B-04-08 kèm SĐT là "để lỗi chỉ đến từ trường đang test", ngược với thực tế (SĐT đúng đặc tả bị app từ chối nên test đỏ vì SĐT) | AI viết lý do theo ý định thiết kế, chưa đối chiếu với lỗi regex đã biết ở bước 1 | Sửa lại ghi chú trong audit trước khi commit: dự đoán D-04-08, B-04-08 đỏ do SĐT | `f5e2f0e` |
+| 5 | 1 | Chọn chạy D-04-04/05/06 qua UI nên không bắt được BUG-04-03 (backend không kiểm tra SĐT); 3 test này xanh | Regex frontend chặn trước nên request không tới backend | Không sửa: giữ theo lựa chọn ở bước 1, ghi vào gap analysis của report | – |
+| 6 | 2 | (Tránh được) `getByLabel('Họ Tên')` trả về 0 phần tử | Label không gắn `for`, input không có id | Đã chạy thử từng locator trước khi viết script, dùng `label:has-text(...) + input` và placeholder | – |
+
+Những điểm đã kiểm tra và không cần sửa:
+- Không còn `waitForTimeout`; timeout 3 giây của `waitForEvent('dialog')` chỉ dùng để xác nhận "không có alert" ở D-04-07.
+- `beforeEach` và `afterEach` cùng gọi `resetProfile`, sau khi chạy hồ sơ về đúng seed kể cả `role`.
+- `getMe` gọi sau khi đã nhận alert, mà alert thành công chỉ bật sau khi `PUT` xong, nên không bị đọc database quá sớm.
+- `expected` trong data đều theo đặc tả FR-04, không có giá trị nào sửa cho khớp với app.
